@@ -171,6 +171,15 @@
     box-shadow:0 12px 32px rgba(0,0,0,.18);
   }
 
+  .fab{
+    position:fixed;right:20px;bottom:20px;width:56px;height:56px;border-radius:50%;
+    background:var(--green);color:#fff;border:none;font-size:24px;line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 6px 18px rgba(35,52,47,.35);z-index:40;
+  }
+  .fab:hover{background:var(--green-dark)}
+  .fab:active{transform:scale(.96)}
+
   ::placeholder{color:var(--faint)}
 </style>
 </head>
@@ -301,7 +310,11 @@
       app.innerHTML = renderOnboarding();
       return;
     }
-    app.innerHTML = renderHeader() + renderTabs() + "<main>" + renderVista() + "</main>" + renderModal();
+    app.innerHTML = renderHeader() + renderTabs() + "<main>" + renderVista() + "</main>" + renderFab() + renderModal();
+  }
+
+  function renderFab() {
+    return '<button class="fab" data-action="nuevo-cliente" title="Agregar cliente" aria-label="Agregar cliente">➕</button>';
   }
 
   function renderOnboarding() {
