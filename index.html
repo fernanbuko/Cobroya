@@ -175,6 +175,15 @@
 
   .danger-zone{border:1px solid rgba(177,78,28,.3);border-radius:10px;padding:16px;background:var(--orange-bg)}
 
+  .onboarding-screen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:24px 16px;background:var(--green);
+  }
+  .onboarding-card{
+    background:var(--paper);border-radius:16px;padding:28px 24px;max-width:400px;width:100%;
+    box-shadow:0 12px 32px rgba(0,0,0,.18);
+  }
+
   ::placeholder{color:var(--faint)}
 </style>
 </head>
@@ -225,16 +234,22 @@
   }
 
   function defaultData() {
-    return { negocio: "", ramas: [], clientes: [], cobros: [] };
+    return { propietario: "", negocio: "", onboardingDone: false, ramas: [], clientes: [], cobros: [] };
   }
   function loadData() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return defaultData();
       var parsed = JSON.parse(raw);
+      var ramas = Array.isArray(parsed.ramas) ? parsed.ramas : [];
       return {
+        propietario: parsed.propietario || "",
         negocio: parsed.negocio || "",
-        ramas: Array.isArray(parsed.ramas) ? parsed.ramas : [],
+        // Los respaldos o datos de antes de que existiera esta pantalla no
+        // traen esta bandera: si ya tenían ramas creadas, se asume que el
+        // negocio ya quedó configurado y no hay que volver a preguntar.
+        onboardingDone: typeof parsed.onboardingDone === "boolean" ? parsed.onboardingDone : ramas.length > 0,
+        ramas: ramas,
         clientes: Array.isArray(parsed.clientes) ? parsed.clientes : [],
         cobros: Array.isArray(parsed.cobros) ? parsed.cobros : []
       };
@@ -311,7 +326,25 @@
   ----------------------------------------------------------*/
   function render() {
     var app = document.getElementById("app");
+    if (!data.onboardingDone) {
+      app.innerHTML = renderOnboarding();
+      return;
+    }
     app.innerHTML = renderHeader() + renderTabs() + "<main>" + renderVista() + "</main>" + renderModal();
+  }
+
+  function renderOnboarding() {
+    return (
+      '<div class="onboarding-screen"><div class="onboarding-card">' +
+        '<div style="font-size:32px;margin-bottom:6px">💰</div>' +
+        '<h1 class="display" style="font-size:22px;margin:0 0 4px">¡Bienvenido a CobraYa!</h1>' +
+        '<p style="font-size:13px;color:var(--muted);margin:0 0 20px">Antes de empezar, cuéntanos quién eres y cuál es tu primera rama o sucursal. Podrás agregar más ramas y editar estos datos después.</p>' +
+        '<div class="field"><span class="label">Nombre del dueño/a</span><input type="text" id="obPropietario" placeholder="Ej. María Torres" /></div>' +
+        '<div class="field"><span class="label">Nombre del negocio (opcional)</span><input type="text" id="obNegocio" placeholder="Ej. Mi negocio" /></div>' +
+        '<div class="field"><span class="label">Nombre de tu primera rama o sucursal</span><input type="text" id="obRama" placeholder="Ej. Sucursal Norte" /></div>' +
+        '<button class="btn btn-primary" style="width:100%;justify-content:center" data-action="completar-onboarding">Comenzar</button>' +
+      "</div></div>"
+    );
   }
 
   function renderHeader() {
@@ -495,10 +528,12 @@
     html += '<p class="section-sub">Configura tu negocio, tus ramas y tus respaldos.</p>';
 
     html += '<div class="card mb-4">' +
+      '<div class="field mb-2"><span class="label">Nombre del dueño/a</span>' +
+        '<input type="text" id="inpPropietario" value="' + esc(data.propietario) + '" placeholder="Ej. María Torres" /></div>' +
       '<div class="field mb-2"><span class="label">Nombre del negocio</span>' +
         '<input type="text" id="inpNegocio" value="' + esc(data.negocio) + '" placeholder="Ej. Mi negocio" /></div>' +
       '<button class="btn btn-ghost btn-sm" data-action="guardar-negocio">Guardar</button>' +
-      '<p style="font-size:12px;color:var(--muted);margin-top:8px">Se usa en los mensajes de cobro por WhatsApp.</p>' +
+      '<p style="font-size:12px;color:var(--muted);margin-top:8px">El nombre del negocio se usa en los mensajes de cobro por WhatsApp.</p>' +
     "</div>";
 
     html += '<div class="row-between mb-2"><h3 class="display" style="font-size:16px;margin:0">Ramas / sucursales</h3>' +
@@ -613,6 +648,25 @@
   }
   function cerrarModal() {
     state.modal = null;
+    render();
+  }
+
+  function completarOnboarding() {
+    var propietario = document.getElementById("obPropietario").value.trim();
+    var negocio = document.getElementById("obNegocio").value.trim();
+    var ramaNombre = document.getElementById("obRama").value.trim();
+    if (!propietario || !ramaNombre) {
+      showToast("Completa tu nombre y el de la rama para continuar.");
+      return;
+    }
+    data.propietario = propietario;
+    data.negocio = negocio;
+    var rama = { id: uid(), nombre: ramaNombre };
+    data.ramas.push(rama);
+    data.onboardingDone = true;
+    state.ramaFiltro = rama.id;
+    saveData();
+    showToast("¡Todo listo!");
     render();
   }
 
@@ -735,6 +789,7 @@
   }
 
   function guardarNegocio() {
+    data.propietario = document.getElementById("inpPropietario").value.trim();
     data.negocio = document.getElementById("inpNegocio").value.trim();
     saveData();
     showToast("Guardado");
@@ -762,9 +817,12 @@
         var incoming = parsed && parsed.data ? parsed.data : parsed;
         if (!incoming || typeof incoming !== "object") throw new Error("formato inválido");
         if (!confirm("Esto reemplazará todos los datos actuales de este dispositivo por los del respaldo. ¿Continuar?")) return;
+        var ramasImportadas = Array.isArray(incoming.ramas) ? incoming.ramas : [];
         data = {
+          propietario: incoming.propietario || "",
           negocio: incoming.negocio || "",
-          ramas: Array.isArray(incoming.ramas) ? incoming.ramas : [],
+          onboardingDone: typeof incoming.onboardingDone === "boolean" ? incoming.onboardingDone : ramasImportadas.length > 0,
+          ramas: ramasImportadas,
           clientes: Array.isArray(incoming.clientes) ? incoming.clientes : [],
           cobros: Array.isArray(incoming.cobros) ? incoming.cobros : []
         };
@@ -825,7 +883,8 @@
       var action = el.getAttribute("data-action");
       var id = el.getAttribute("data-id");
 
-      if (action === "nueva-rama") abrirModal("rama", null);
+      if (action === "completar-onboarding") completarOnboarding();
+      else if (action === "nueva-rama") abrirModal("rama", null);
       else if (action === "editar-rama") abrirModal("rama", ramaById(id));
       else if (action === "guardar-rama") guardarRama(id || null);
       else if (action === "eliminar-rama") eliminarRama(id);
