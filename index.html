@@ -166,6 +166,12 @@
   }
   @media (min-width:640px){.modal{border-radius:14px}}
 
+  .modal-overlay.confirm-overlay{align-items:center;padding:24px}
+  .modal-overlay.confirm-overlay .modal{
+    border-radius:16px;max-width:340px;text-align:center;
+  }
+  .modal-overlay.confirm-overlay .modal .btn{flex:1;justify-content:center}
+
   .toast{
     position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
     background:var(--ink);color:#fff;padding:11px 18px;border-radius:9px;font-size:13.5px;
@@ -624,7 +630,8 @@
     else if (m.type === "cobro") body = modalCobroForm(m.payload);
     else if (m.type === "rapido") body = modalRapidoForm();
     else if (m.type === "confirm") body = modalConfirmForm(m.payload);
-    return '<div class="modal-overlay" id="modalOverlay"><div class="modal">' + body + "</div></div>";
+    var overlayClass = "modal-overlay" + (m.type === "confirm" ? " confirm-overlay" : "");
+    return '<div class="' + overlayClass + '" id="modalOverlay"><div class="modal">' + body + "</div></div>";
   }
 
   function modalConfirmForm(payload) {
