@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <title>CobraYa — Registro de cobros</title>
-<meta name="description" content="Registra y controla los cobros de tus clientes en cualquier rama o sucursal." />
+<meta name="description" content="Registra y controla los cobros de tus clientes." />
 <meta name="theme-color" content="#3D6B5C" />
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icon-192.png" />
@@ -51,22 +51,10 @@
   header.topbar .brand .logo{font-size:22px}
   header.topbar h1{font-size:20px;margin:0;font-weight:600;}
   header.topbar .sub{font-size:12px;opacity:.85;margin-top:2px}
-  .rama-bar{
-    margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  .filter-select{
+    width:100%;background:#fff;border:1px solid var(--border);color:var(--ink);
+    border-radius:8px;padding:9px 10px;font-size:14px;
   }
-  .rama-select{
-    flex:1;min-width:160px;
-    background:rgba(255,255,255,.12);
-    border:1px solid rgba(255,255,255,.35);
-    color:#fff;border-radius:8px;padding:9px 10px;font-size:14px;
-  }
-  .rama-select option{color:#23342F}
-  .btn-add-rama{
-    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);
-    color:#fff;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:500;
-    white-space:nowrap;
-  }
-  .btn-add-rama:hover{background:rgba(255,255,255,.25)}
 
   nav.tabs{
     display:flex;gap:4px;background:var(--paper);border-bottom:1px solid var(--border);
@@ -143,7 +131,6 @@
   .badge{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:5px}
   .badge.pagado{background:var(--green-bg);color:var(--green)}
   .badge.pendiente{background:var(--orange-bg);color:var(--orange)}
-  .badge.rama{background:#EFEBE0;color:var(--muted)}
 
   .entry-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
   .entry-name{font-weight:600;font-size:15px}
@@ -234,23 +221,22 @@
   }
 
   function defaultData() {
-    return { propietario: "", negocio: "", onboardingDone: false, ramas: [], clientes: [], cobros: [] };
+    return { propietario: "", negocio: "", onboardingDone: false, clientes: [], cobros: [] };
   }
   function loadData() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return defaultData();
       var parsed = JSON.parse(raw);
-      var ramas = Array.isArray(parsed.ramas) ? parsed.ramas : [];
+      var clientes = Array.isArray(parsed.clientes) ? parsed.clientes : [];
       return {
         propietario: parsed.propietario || "",
         negocio: parsed.negocio || "",
         // Los respaldos o datos de antes de que existiera esta pantalla no
-        // traen esta bandera: si ya tenían ramas creadas, se asume que el
-        // negocio ya quedó configurado y no hay que volver a preguntar.
-        onboardingDone: typeof parsed.onboardingDone === "boolean" ? parsed.onboardingDone : ramas.length > 0,
-        ramas: ramas,
-        clientes: Array.isArray(parsed.clientes) ? parsed.clientes : [],
+        // traen esta bandera: si ya tenían clientes cargados, se asume que
+        // el negocio ya quedó configurado y no hay que volver a preguntar.
+        onboardingDone: typeof parsed.onboardingDone === "boolean" ? parsed.onboardingDone : clientes.length > 0,
+        clientes: clientes,
         cobros: Array.isArray(parsed.cobros) ? parsed.cobros : []
       };
     } catch (e) {
@@ -267,7 +253,6 @@
      Estado de la interfaz
   ----------------------------------------------------------*/
   var state = {
-    ramaFiltro: "todas", // "todas" o id de rama
     vista: "resumen",    // resumen | clientes | cobros | ajustes
     modal: null,         // {type, payload}
     clienteFiltroCobros: "todos"
@@ -286,25 +271,11 @@
   /* ---------------------------------------------------------
      Helpers de datos
   ----------------------------------------------------------*/
-  function ramaById(id) {
-    return data.ramas.find(function (r) { return r.id === id; });
-  }
   function clienteById(id) {
     return data.clientes.find(function (c) { return c.id === id; });
   }
-  function nombreRama(id) {
-    var r = ramaById(id);
-    return r ? r.nombre : "Sin rama";
-  }
-  function clientesDeRama(ramaId) {
-    if (!ramaId || ramaId === "todas") return data.clientes;
-    return data.clientes.filter(function (c) { return c.ramaId === ramaId; });
-  }
   function cobrosFiltrados() {
     var list = data.cobros.slice();
-    if (state.ramaFiltro !== "todas") {
-      list = list.filter(function (c) { return c.ramaId === state.ramaFiltro; });
-    }
     if (state.vista === "cobros" && state.clienteFiltroCobros !== "todos") {
       list = list.filter(function (c) { return c.clienteId === state.clienteFiltroCobros; });
     }
@@ -338,30 +309,21 @@
       '<div class="onboarding-screen"><div class="onboarding-card">' +
         '<div style="font-size:32px;margin-bottom:6px">💰</div>' +
         '<h1 class="display" style="font-size:22px;margin:0 0 4px">¡Bienvenido a CobraYa!</h1>' +
-        '<p style="font-size:13px;color:var(--muted);margin:0 0 20px">Antes de empezar, cuéntanos quién eres y cuál es tu primera rama o sucursal. Podrás agregar más ramas y editar estos datos después.</p>' +
+        '<p style="font-size:13px;color:var(--muted);margin:0 0 20px">Antes de empezar, cuéntanos quién eres y el nombre de tu negocio. Podrás editar estos datos después en Ajustes.</p>' +
         '<div class="field"><span class="label">Nombre del dueño/a</span><input type="text" id="obPropietario" placeholder="Ej. María Torres" /></div>' +
-        '<div class="field"><span class="label">Nombre del negocio (opcional)</span><input type="text" id="obNegocio" placeholder="Ej. Mi negocio" /></div>' +
-        '<div class="field"><span class="label">Nombre de tu primera rama o sucursal</span><input type="text" id="obRama" placeholder="Ej. Sucursal Norte" /></div>' +
+        '<div class="field"><span class="label">Nombre del negocio</span><input type="text" id="obNegocio" placeholder="Ej. Mi negocio" /></div>' +
         '<button class="btn btn-primary" style="width:100%;justify-content:center" data-action="completar-onboarding">Comenzar</button>' +
       "</div></div>"
     );
   }
 
   function renderHeader() {
-    var opciones = '<option value="todas">Todas las ramas</option>' +
-      data.ramas.map(function (r) {
-        return '<option value="' + esc(r.id) + '"' + (state.ramaFiltro === r.id ? " selected" : "") + '>' + esc(r.nombre) + "</option>";
-      }).join("");
     return (
       '<header class="topbar">' +
         '<div class="brand"><span class="logo">💰</span><div>' +
           '<h1 class="display">CobraYa</h1>' +
-          '<div class="sub">Registro de cobros por rama</div>' +
+          '<div class="sub">' + esc(data.negocio || "Registro de cobros") + "</div>" +
         "</div></div>" +
-        '<div class="rama-bar">' +
-          '<select class="rama-select" id="selRamaFiltro">' + opciones + "</select>" +
-          '<button class="btn-add-rama" data-action="nueva-rama">+ Rama</button>' +
-        "</div>" +
       "</header>"
     );
   }
@@ -396,7 +358,6 @@
     var pendientes = list.filter(function (c) { return !c.pagado; });
     var html = "";
     html += '<h2 class="section-title display">Resumen</h2>';
-    html += '<p class="section-sub">' + (state.ramaFiltro === "todas" ? "Todas las ramas" : esc(nombreRama(state.ramaFiltro))) + "</p>";
     html += '<div class="cards-2 mb-4">' +
       '<div class="stat-card"><div class="val green">' + money(t.total) + '</div><div class="lbl">Total cobrado</div></div>' +
       '<div class="stat-card"><div class="val orange">' + money(t.pendiente) + '</div><div class="lbl">Pendiente de pago</div></div>' +
@@ -418,17 +379,13 @@
 
   /* --- Clientes --- */
   function renderClientes() {
-    var list = clientesDeRama(state.ramaFiltro).slice().sort(function (a, b) { return (a.nombre || "").localeCompare(b.nombre || ""); });
+    var list = data.clientes.slice().sort(function (a, b) { return (a.nombre || "").localeCompare(b.nombre || ""); });
     var html = "";
     html += '<div class="row-between mb-1"><h2 class="section-title display">Clientes</h2></div>';
-    html += '<p class="section-sub">' + (state.ramaFiltro === "todas" ? "Todas las ramas" : esc(nombreRama(state.ramaFiltro))) + "</p>";
+    html += '<p class="section-sub">Los clientes de tu negocio.</p>';
     html += '<div class="mb-4">' +
-      '<button class="btn btn-primary" data-action="nuevo-cliente" ' + (data.ramas.length === 0 ? "disabled" : "") + ">➕ Nuevo cliente</button>" +
+      '<button class="btn btn-primary" data-action="nuevo-cliente">➕ Nuevo cliente</button>' +
     "</div>";
-    if (data.ramas.length === 0) {
-      html += emptyState("🏬", "Primero crea una rama", "Necesitas al menos una rama o sucursal para poder agregar clientes.");
-      return html;
-    }
     if (list.length === 0) {
       html += emptyState("👤", "Sin clientes", "Los clientes que agregues aparecerán aquí.");
       return html;
@@ -445,7 +402,7 @@
         '<div class="entry-top">' +
           '<div class="min-w-0">' +
             '<div class="entry-name">' + esc(c.nombre) + "</div>" +
-            '<div class="entry-meta">' + (c.telefono ? esc(c.telefono) + " · " : "") + esc(nombreRama(c.ramaId)) + "</div>" +
+            (c.telefono ? '<div class="entry-meta">' + esc(c.telefono) + "</div>" : "") +
           "</div>" +
           '<div class="entry-actions">' +
             '<button class="icon-btn" data-action="editar-cliente" data-id="' + c.id + '" title="Editar">✎</button>' +
@@ -462,24 +419,19 @@
 
   /* --- Cobros --- */
   function renderCobros() {
-    var clientesDisponibles = clientesDeRama(state.ramaFiltro);
     var list = cobrosFiltrados();
     var html = "";
     html += '<div class="row-between mb-1"><h2 class="section-title display">Cobros</h2></div>';
-    html += '<p class="section-sub">' + (state.ramaFiltro === "todas" ? "Todas las ramas" : esc(nombreRama(state.ramaFiltro))) + "</p>";
+    html += '<p class="section-sub">Todos los cobros registrados.</p>';
 
     var filtroOptions = '<option value="todos">Todos los clientes</option>' +
-      clientesDisponibles.map(function (c) {
+      data.clientes.map(function (c) {
         return '<option value="' + c.id + '"' + (state.clienteFiltroCobros === c.id ? " selected" : "") + '>' + esc(c.nombre) + "</option>";
       }).join("");
-    html += '<div class="mb-3"><select class="rama-select" style="background:#fff;border-color:var(--border);color:var(--ink)" id="selClienteFiltro">' + filtroOptions + "</select></div>";
+    html += '<div class="mb-3"><select class="filter-select" id="selClienteFiltro">' + filtroOptions + "</select></div>";
 
     html += '<div class="mb-4"><button class="btn btn-primary" data-action="nuevo-cobro" ' + (data.clientes.length === 0 ? "disabled" : "") + ">💰 Registrar cobro</button></div>";
 
-    if (data.ramas.length === 0) {
-      html += emptyState("🏬", "Primero crea una rama", "Necesitas al menos una rama y un cliente para registrar cobros.");
-      return html;
-    }
     if (data.clientes.length === 0) {
       html += emptyState("👤", "Primero agrega un cliente", "Ve a la pestaña Clientes para crear el primero.");
       return html;
@@ -502,7 +454,7 @@
           '<div class="min-w-0">' +
             '<div class="entry-name">' + esc(nombreCliente) + "</div>" +
             '<div class="entry-meta">' + esc(c.concepto) + "</div>" +
-            '<div class="entry-meta mono">' + esc(nombreRama(c.ramaId)) + " · " + formatDate(c.fecha) + "</div>" +
+            '<div class="entry-meta mono">' + formatDate(c.fecha) + "</div>" +
           "</div>" +
           '<div class="entry-actions">' +
             '<span class="entry-amount">' + money(c.monto) + "</span>" +
@@ -525,7 +477,7 @@
   function renderAjustes() {
     var html = "";
     html += '<h2 class="section-title display">Ajustes</h2>';
-    html += '<p class="section-sub">Configura tu negocio, tus ramas y tus respaldos.</p>';
+    html += '<p class="section-sub">Configura tu negocio y tus respaldos.</p>';
 
     html += '<div class="card mb-4">' +
       '<div class="field mb-2"><span class="label">Nombre del dueño/a</span>' +
@@ -535,22 +487,6 @@
       '<button class="btn btn-ghost btn-sm" data-action="guardar-negocio">Guardar</button>' +
       '<p style="font-size:12px;color:var(--muted);margin-top:8px">El nombre del negocio se usa en los mensajes de cobro por WhatsApp.</p>' +
     "</div>";
-
-    html += '<div class="row-between mb-2"><h3 class="display" style="font-size:16px;margin:0">Ramas / sucursales</h3>' +
-      '<button class="btn btn-ghost btn-sm" data-action="nueva-rama">+ Nueva</button></div>';
-    if (data.ramas.length === 0) {
-      html += emptyState("🏬", "Sin ramas todavía", "Crea tu primera rama o sucursal para empezar.");
-    } else {
-      html += '<div class="list mb-4">' + data.ramas.map(function (r) {
-        var cantClientes = data.clientes.filter(function (c) { return c.ramaId === r.id; }).length;
-        return '<div class="card"><div class="entry-top">' +
-          '<div><div class="entry-name">' + esc(r.nombre) + '</div><div class="entry-meta">' + cantClientes + " cliente(s)</div></div>" +
-          '<div class="entry-actions">' +
-            '<button class="icon-btn" data-action="editar-rama" data-id="' + r.id + '" title="Editar">✎</button>' +
-            '<button class="icon-btn danger" data-action="eliminar-rama" data-id="' + r.id + '" title="Eliminar">🗑</button>' +
-          "</div></div></div>";
-      }).join("") + "</div>";
-    }
 
     html += '<div class="row-between mb-2"><h3 class="display" style="font-size:16px;margin:0">Respaldo</h3></div>';
     html += '<div class="card mb-4">' +
@@ -563,7 +499,7 @@
 
     html += '<div class="danger-zone">' +
       '<div class="entry-name" style="color:var(--orange)">Borrar todos los datos</div>' +
-      '<p style="font-size:13px;color:var(--muted);margin:6px 0 10px">Elimina ramas, clientes y cobros de este dispositivo. No se puede deshacer.</p>' +
+      '<p style="font-size:13px;color:var(--muted);margin:6px 0 10px">Elimina clientes y cobros de este dispositivo. No se puede deshacer.</p>' +
       '<button class="btn btn-danger btn-sm" data-action="borrar-todo">Borrar todo</button>' +
     "</div>";
 
@@ -577,37 +513,17 @@
     if (!state.modal) return "";
     var m = state.modal;
     var body = "";
-    if (m.type === "rama") body = modalRamaForm(m.payload);
-    else if (m.type === "cliente") body = modalClienteForm(m.payload);
+    if (m.type === "cliente") body = modalClienteForm(m.payload);
     else if (m.type === "cobro") body = modalCobroForm(m.payload);
     return '<div class="modal-overlay" id="modalOverlay"><div class="modal">' + body + "</div></div>";
-  }
-
-  function modalRamaForm(payload) {
-    var editing = payload && payload.id;
-    var nombre = payload ? payload.nombre : "";
-    return (
-      '<h3 class="display mb-3" style="font-size:18px">' + (editing ? "Editar rama" : "Nueva rama") + "</h3>" +
-      '<div class="field"><span class="label">Nombre de la rama</span>' +
-        '<input type="text" id="fRamaNombre" value="' + esc(nombre) + '" placeholder="Ej. Sucursal Norte" /></div>' +
-      '<div style="display:flex;gap:8px;margin-top:6px">' +
-        '<button class="btn btn-primary" data-action="guardar-rama" data-id="' + (editing || "") + '">Guardar</button>' +
-        '<button class="btn btn-ghost" data-action="cerrar-modal">Cancelar</button>' +
-      "</div>"
-    );
   }
 
   function modalClienteForm(payload) {
     var editing = payload && payload.id;
     var nombre = payload ? payload.nombre : "";
     var telefono = payload ? payload.telefono : "";
-    var ramaId = payload ? payload.ramaId : (state.ramaFiltro !== "todas" ? state.ramaFiltro : (data.ramas[0] ? data.ramas[0].id : ""));
-    var ramaOptions = data.ramas.map(function (r) {
-      return '<option value="' + r.id + '"' + (r.id === ramaId ? " selected" : "") + '>' + esc(r.nombre) + "</option>";
-    }).join("");
     return (
       '<h3 class="display mb-3" style="font-size:18px">' + (editing ? "Editar cliente" : "Nuevo cliente") + "</h3>" +
-      '<div class="field"><span class="label">Rama / sucursal</span><select id="fClienteRama">' + ramaOptions + "</select></div>" +
       '<div class="field"><span class="label">Nombre del cliente</span><input type="text" id="fClienteNombre" value="' + esc(nombre) + '" placeholder="Nombre completo" /></div>' +
       '<div class="field"><span class="label">Teléfono (opcional, para WhatsApp)</span><input type="tel" id="fClienteTelefono" value="' + esc(telefono) + '" placeholder="Ej. 0991234567" /></div>' +
       '<div style="display:flex;gap:8px;margin-top:6px">' +
@@ -624,7 +540,7 @@
     var monto = payload ? payload.monto : "";
     var pagado = payload ? !!payload.pagado : true;
     var clientesOptions = data.clientes.map(function (c) {
-      return '<option value="' + c.id + '"' + (c.id === clienteId ? " selected" : "") + '>' + esc(c.nombre) + " (" + esc(nombreRama(c.ramaId)) + ")</option>";
+      return '<option value="' + c.id + '"' + (c.id === clienteId ? " selected" : "") + '>' + esc(c.nombre) + "</option>";
     }).join("");
     return (
       '<h3 class="display mb-3" style="font-size:18px">' + (editing ? "Editar cobro" : "Registrar cobro") + "</h3>" +
@@ -654,59 +570,28 @@
   function completarOnboarding() {
     var propietario = document.getElementById("obPropietario").value.trim();
     var negocio = document.getElementById("obNegocio").value.trim();
-    var ramaNombre = document.getElementById("obRama").value.trim();
-    if (!propietario || !ramaNombre) {
-      showToast("Completa tu nombre y el de la rama para continuar.");
+    if (!propietario || !negocio) {
+      showToast("Completa tu nombre y el de tu negocio para continuar.");
       return;
     }
     data.propietario = propietario;
     data.negocio = negocio;
-    var rama = { id: uid(), nombre: ramaNombre };
-    data.ramas.push(rama);
     data.onboardingDone = true;
-    state.ramaFiltro = rama.id;
     saveData();
     showToast("¡Todo listo!");
     render();
   }
 
-  function guardarRama(id) {
-    var nombre = document.getElementById("fRamaNombre").value.trim();
-    if (!nombre) return;
-    if (id) {
-      var r = ramaById(id);
-      if (r) r.nombre = nombre;
-      showToast("Rama actualizada");
-    } else {
-      data.ramas.push({ id: uid(), nombre: nombre });
-      showToast("Rama creada");
-    }
-    saveData();
-    cerrarModal();
-  }
-
-  function eliminarRama(id) {
-    var r = ramaById(id);
-    if (!r) return;
-    if (!confirm('¿Eliminar la rama "' + r.nombre + '"? Los clientes y cobros asociados no se borrarán, pero quedarán sin rama.')) return;
-    data.ramas = data.ramas.filter(function (x) { return x.id !== id; });
-    if (state.ramaFiltro === id) state.ramaFiltro = "todas";
-    saveData();
-    showToast("Rama eliminada");
-    render();
-  }
-
   function guardarCliente(id) {
-    var ramaId = document.getElementById("fClienteRama").value;
     var nombre = document.getElementById("fClienteNombre").value.trim();
     var telefono = document.getElementById("fClienteTelefono").value.trim();
-    if (!ramaId || !nombre) return;
+    if (!nombre) return;
     if (id) {
       var c = clienteById(id);
-      if (c) { c.ramaId = ramaId; c.nombre = nombre; c.telefono = telefono; }
+      if (c) { c.nombre = nombre; c.telefono = telefono; }
       showToast("Cliente actualizado");
     } else {
-      data.clientes.push({ id: uid(), ramaId: ramaId, nombre: nombre, telefono: telefono });
+      data.clientes.push({ id: uid(), nombre: nombre, telefono: telefono });
       showToast("Cliente agregado");
     }
     saveData();
@@ -732,12 +617,10 @@
     var monto = document.getElementById("fCobroMonto").value;
     var pagado = document.getElementById("fCobroPagado").checked;
     if (!clienteId || !concepto || !monto) return;
-    var cliente = clienteById(clienteId);
     if (id) {
       var existing = data.cobros.find(function (x) { return x.id === id; });
       if (existing) {
         existing.clienteId = clienteId;
-        existing.ramaId = cliente ? cliente.ramaId : existing.ramaId;
         existing.concepto = concepto;
         existing.monto = monto;
         existing.pagado = pagado;
@@ -747,7 +630,6 @@
       data.cobros.push({
         id: uid(),
         clienteId: clienteId,
-        ramaId: cliente ? cliente.ramaId : null,
         concepto: concepto,
         monto: monto,
         pagado: pagado,
@@ -783,7 +665,7 @@
     if (!cliente || !cliente.telefono) return;
     var negocio = data.negocio || "nuestro negocio";
     var mensaje = "Hola" + (cliente.nombre ? " " + cliente.nombre : "") + ", le escribimos de " + negocio +
-      " (" + nombreRama(c.ramaId) + ") sobre un saldo pendiente:\n\n• " + c.concepto + " (" + formatDate(c.fecha) + "): " + money(c.monto) +
+      " sobre un saldo pendiente:\n\n• " + c.concepto + " (" + formatDate(c.fecha) + "): " + money(c.monto) +
       "\n\nQuedamos atentos para coordinar el pago. ¡Gracias!";
     window.open(whatsappLink(cliente.telefono, mensaje), "_blank");
   }
@@ -817,17 +699,15 @@
         var incoming = parsed && parsed.data ? parsed.data : parsed;
         if (!incoming || typeof incoming !== "object") throw new Error("formato inválido");
         if (!confirm("Esto reemplazará todos los datos actuales de este dispositivo por los del respaldo. ¿Continuar?")) return;
-        var ramasImportadas = Array.isArray(incoming.ramas) ? incoming.ramas : [];
+        var clientesImportados = Array.isArray(incoming.clientes) ? incoming.clientes : [];
         data = {
           propietario: incoming.propietario || "",
           negocio: incoming.negocio || "",
-          onboardingDone: typeof incoming.onboardingDone === "boolean" ? incoming.onboardingDone : ramasImportadas.length > 0,
-          ramas: ramasImportadas,
-          clientes: Array.isArray(incoming.clientes) ? incoming.clientes : [],
+          onboardingDone: typeof incoming.onboardingDone === "boolean" ? incoming.onboardingDone : clientesImportados.length > 0,
+          clientes: clientesImportados,
           cobros: Array.isArray(incoming.cobros) ? incoming.cobros : []
         };
         saveData();
-        state.ramaFiltro = "todas";
         showToast("Respaldo restaurado");
         render();
       } catch (err) {
@@ -838,10 +718,9 @@
   }
 
   function borrarTodo() {
-    if (!confirm("Esto borrará TODAS las ramas, clientes y cobros de este dispositivo. Esta acción no se puede deshacer. ¿Continuar?")) return;
+    if (!confirm("Esto borrará TODOS los clientes y cobros de este dispositivo. Esta acción no se puede deshacer. ¿Continuar?")) return;
     data = defaultData();
     saveData();
-    state.ramaFiltro = "todas";
     showToast("Datos borrados");
     render();
   }
@@ -852,10 +731,7 @@
   ----------------------------------------------------------*/
   function setupGlobalEvents() {
     document.addEventListener("change", function (e) {
-      if (e.target.id === "selRamaFiltro") {
-        state.ramaFiltro = e.target.value;
-        render();
-      } else if (e.target.id === "selClienteFiltro") {
+      if (e.target.id === "selClienteFiltro") {
         state.clienteFiltroCobros = e.target.value;
         render();
       } else if (e.target.id === "inpImportar") {
@@ -884,10 +760,6 @@
       var id = el.getAttribute("data-id");
 
       if (action === "completar-onboarding") completarOnboarding();
-      else if (action === "nueva-rama") abrirModal("rama", null);
-      else if (action === "editar-rama") abrirModal("rama", ramaById(id));
-      else if (action === "guardar-rama") guardarRama(id || null);
-      else if (action === "eliminar-rama") eliminarRama(id);
       else if (action === "cerrar-modal") cerrarModal();
 
       else if (action === "nuevo-cliente") abrirModal("cliente", null);
