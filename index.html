@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>CobraYa — Registro de cobros</title>
+<meta name="description" content="Registra y controla los cobros de tus clientes en cualquier rama o sucursal." />
+<meta name="theme-color" content="#3D6B5C" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+<style>
+  :root{
+    --bg:#F7F4EC;
+    --paper:#FFFFFF;
+    --border:#DDD5C4;
+    --ink:#23342F;
+    --muted:#6B7A72;
+    --faint:#A6A08F;
+    --green:#3D6B5C;
+    --green-dark:#2F5548;
+    --green-bg:#EAF0EC;
+    --orange:#B14E1C;
+    --orange-soft:#E08A3E;
+    --orange-bg:#FBEADD;
+    --danger:#B14E1C;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:72px;
+  }
+  .display{font-family:'Fraunces',serif}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  a{color:inherit}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:15px}
+
+  header.topbar{
+    background:var(--green);
+    color:#fff;
+    padding:18px 20px 16px;
+    position:sticky;top:0;z-index:10;
+  }
+  header.topbar .brand{display:flex;align-items:center;gap:10px}
+  header.topbar .brand .logo{font-size:22px}
+  header.topbar h1{font-size:20px;margin:0;font-weight:600;}
+  header.topbar .sub{font-size:12px;opacity:.85;margin-top:2px}
+  .rama-bar{
+    margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  }
+  .rama-select{
+    flex:1;min-width:160px;
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.35);
+    color:#fff;border-radius:8px;padding:9px 10px;font-size:14px;
+  }
+  .rama-select option{color:#23342F}
+  .btn-add-rama{
+    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);
+    color:#fff;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:500;
+    white-space:nowrap;
+  }
+  .btn-add-rama:hover{background:rgba(255,255,255,.25)}
+
+  nav.tabs{
+    display:flex;gap:4px;background:var(--paper);border-bottom:1px solid var(--border);
+    padding:0 12px;overflow-x:auto;position:sticky;top:96px;z-index:9;
+  }
+  nav.tabs button{
+    background:none;border:none;padding:14px 12px;font-size:13.5px;font-weight:500;
+    color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;
+  }
+  nav.tabs button.active{color:var(--green);border-bottom-color:var(--green)}
+
+  main{max-width:760px;margin:0 auto;padding:20px 16px 40px}
+
+  .row-between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .mb-1{margin-bottom:4px}.mb-2{margin-bottom:8px}.mb-3{margin-bottom:14px}.mb-4{margin-bottom:20px}
+  .mt-2{margin-top:8px}.mt-3{margin-top:14px}
+
+  h2.section-title{font-size:20px;margin:0 0 4px;font-weight:600}
+  p.section-sub{font-size:13px;color:var(--muted);margin:0 0 18px}
+
+  .cards-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat-card{
+    background:var(--paper);border:1px solid var(--border);border-radius:10px;
+    padding:14px;text-align:center;
+  }
+  .stat-card .val{font-size:19px;font-weight:600}
+  .stat-card .val.green{color:var(--green)}
+  .stat-card .val.orange{color:var(--orange)}
+  .stat-card .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:3px}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;border-radius:8px;
+    font-size:14px;font-weight:500;padding:10px 15px;border:1px solid transparent;
+  }
+  .btn-primary{background:var(--green);color:#fff}
+  .btn-primary:hover{background:var(--green-dark)}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed}
+  .btn-ghost{background:none;border-color:var(--border);color:var(--ink)}
+  .btn-ghost:hover{background:#fff}
+  .btn-danger{background:none;border-color:rgba(177,78,28,.35);color:var(--orange)}
+  .btn-danger:hover{background:var(--orange-bg)}
+  .btn-sm{padding:6px 10px;font-size:12.5px;border-radius:7px}
+  .icon-btn{background:none;border:none;color:var(--faint);font-size:15px;padding:2px 4px}
+  .icon-btn:hover{color:var(--green)}
+  .icon-btn.danger:hover{color:var(--orange)}
+
+  .card{background:var(--paper);border:1px solid var(--border);border-radius:10px;padding:16px}
+  .list{display:flex;flex-direction:column;gap:10px}
+
+  .empty{
+    border:1px dashed var(--border);border-radius:10px;padding:44px 20px;text-align:center;
+  }
+  .empty .emo{font-size:28px;margin-bottom:8px}
+  .empty .t{font-family:'Fraunces',serif;font-size:17px;font-weight:500}
+  .empty .s{font-size:13px;color:var(--muted);margin-top:4px}
+
+  .field{display:block;margin-bottom:14px}
+  .field .label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;font-family:'IBM Plex Mono',monospace}
+  .field input[type=text],.field input[type=tel],.field input[type=number],.field input[type=date],.field select,.field textarea{
+    width:100%;background:#fff;border:1px solid var(--border);border-radius:8px;
+    padding:10px 11px;font-size:15px;color:var(--ink);
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--green);outline-offset:0;border-color:transparent}
+  .checkbox-row{display:flex;align-items:center;gap:9px;margin-bottom:12px;cursor:pointer;user-select:none;font-size:14px}
+  .checkbox-row input{width:16px;height:16px;accent-color:var(--green)}
+
+  .pill{
+    display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;
+    border:1px solid var(--border);font-size:13px;background:none;color:var(--ink);
+  }
+  .pill.active{background:var(--green);border-color:var(--green);color:#fff}
+  .pill-row{display:flex;flex-wrap:wrap;gap:8px}
+
+  .badge{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:5px}
+  .badge.pagado{background:var(--green-bg);color:var(--green)}
+  .badge.pendiente{background:var(--orange-bg);color:var(--orange)}
+  .badge.rama{background:#EFEBE0;color:var(--muted)}
+
+  .entry-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .entry-name{font-weight:600;font-size:15px}
+  .entry-meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .entry-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+  .entry-amount{font-weight:600;font-size:15px}
+  .entry-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+
+  footer.hint{max-width:760px;margin:8px auto 0;padding:0 16px;font-size:12px;color:var(--faint)}
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(35,52,47,.45);display:flex;align-items:flex-end;
+    justify-content:center;z-index:50;padding:0;
+  }
+  @media (min-width:640px){.modal-overlay{align-items:center;padding:20px}}
+  .modal{
+    background:var(--paper);width:100%;max-width:480px;border-radius:16px 16px 0 0;
+    padding:22px 20px 26px;max-height:88vh;overflow-y:auto;
+  }
+  @media (min-width:640px){.modal{border-radius:14px}}
+
+  .toast{
+    position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:11px 18px;border-radius:9px;font-size:13.5px;
+    z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.2);opacity:0;transition:opacity .2s,transform .2s;
+    pointer-events:none;
+  }
+  .toast.show{opacity:1}
+
+  .danger-zone{border:1px solid rgba(177,78,28,.3);border-radius:10px;padding:16px;background:var(--orange-bg)}
+
+  ::placeholder{color:var(--faint)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------------------------------------------------
+     Almacenamiento (localStorage, sin backend)
+  ----------------------------------------------------------*/
+  var STORAGE_KEY = "cobraya:data:v1";
+
+  function uid() {
+    return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  }
+  function todayISO() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+  function formatDate(iso) {
+    if (!iso) return "";
+    var parts = iso.split("-");
+    if (parts.length !== 3) return iso;
+    return parts[2] + "/" + parts[1] + "/" + parts[0];
+  }
+  function money(n) {
+    var v = parseFloat(n);
+    if (isNaN(v)) v = 0;
+    return "$" + v.toFixed(2);
+  }
+  function esc(str) {
+    return String(str == null ? "" : str).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function onlyDigits(str) {
+    return String(str || "").replace(/[^0-9]/g, "");
+  }
+  function whatsappLink(telefono, mensaje) {
+    var num = onlyDigits(telefono);
+    return "https://wa.me/" + num + "?text=" + encodeURIComponent(mensaje);
+  }
+
+  function defaultData() {
+    return { negocio: "", ramas: [], clientes: [], cobros: [] };
+  }
+  function loadData() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultData();
+      var parsed = JSON.parse(raw);
+      return {
+        negocio: parsed.negocio || "",
+        ramas: Array.isArray(parsed.ramas) ? parsed.ramas : [],
+        clientes: Array.isArray(parsed.clientes) ? parsed.clientes : [],
+        cobros: Array.isArray(parsed.cobros) ? parsed.cobros : []
+      };
+    } catch (e) {
+      return defaultData();
+    }
+  }
+  function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  var data = loadData();
+
+  /* ---------------------------------------------------------
+     Estado de la interfaz
+  ----------------------------------------------------------*/
+  var state = {
+    ramaFiltro: "todas", // "todas" o id de rama
+    vista: "resumen",    // resumen | clientes | cobros | ajustes
+    modal: null,         // {type, payload}
+    clienteFiltroCobros: "todos"
+  };
+
+  function showToast(msg) {
+    var el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function () {
+      el.classList.remove("show");
+    }, 2200);
+  }
+
+  /* ---------------------------------------------------------
+     Helpers de datos
+  ----------------------------------------------------------*/
+  function ramaById(id) {
+    return data.ramas.find(function (r) { return r.id === id; });
+  }
+  function clienteById(id) {
+    return data.clientes.find(function (c) { return c.id === id; });
+  }
+  function nombreRama(id) {
+    var r = ramaById(id);
+    return r ? r.nombre : "Sin rama";
+  }
+  function clientesDeRama(ramaId) {
+    if (!ramaId || ramaId === "todas") return data.clientes;
+    return data.clientes.filter(function (c) { return c.ramaId === ramaId; });
+  }
+  function cobrosFiltrados() {
+    var list = data.cobros.slice();
+    if (state.ramaFiltro !== "todas") {
+      list = list.filter(function (c) { return c.ramaId === state.ramaFiltro; });
+    }
+    if (state.vista === "cobros" && state.clienteFiltroCobros !== "todos") {
+      list = list.filter(function (c) { return c.clienteId === state.clienteFiltroCobros; });
+    }
+    list.sort(function (a, b) { return a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0; });
+    return list;
+  }
+  function totales(list) {
+    var total = 0, pendiente = 0;
+    list.forEach(function (c) {
+      var m = parseFloat(c.monto) || 0;
+      total += m;
+      if (!c.pagado) pendiente += m;
+    });
+    return { total: total, pendiente: pendiente };
+  }
+
+  /* ---------------------------------------------------------
+     Render
+  ----------------------------------------------------------*/
+  function render() {
+    var app = document.getElementById("app");
+    app.innerHTML = renderHeader() + renderTabs() + "<main>" + renderVista() + "</main>" + renderModal();
+  }
+
+  function renderHeader() {
+    var opciones = '<option value="todas">Todas las ramas</option>' +
+      data.ramas.map(function (r) {
+        return '<option value="' + esc(r.id) + '"' + (state.ramaFiltro === r.id ? " selected" : "") + '>' + esc(r.nombre) + "</option>";
+      }).join("");
+    return (
+      '<header class="topbar">' +
+        '<div class="brand"><span class="logo">💰</span><div>' +
+          '<h1 class="display">CobraYa</h1>' +
+          '<div class="sub">Registro de cobros por rama</div>' +
+        "</div></div>" +
+        '<div class="rama-bar">' +
+          '<select class="rama-select" id="selRamaFiltro">' + opciones + "</select>" +
+          '<button class="btn-add-rama" data-action="nueva-rama">+ Rama</button>' +
+        "</div>" +
+      "</header>"
+    );
+  }
+
+  var TABS = [
+    { key: "resumen", label: "Resumen" },
+    { key: "clientes", label: "Clientes" },
+    { key: "cobros", label: "Cobros" },
+    { key: "ajustes", label: "Ajustes" }
+  ];
+  function renderTabs() {
+    return (
+      "<nav class=\"tabs\">" +
+      TABS.map(function (t) {
+        return '<button data-vista="' + t.key + '" class="' + (state.vista === t.key ? "active" : "") + '">' + t.label + "</button>";
+      }).join("") +
+      "</nav>"
+    );
+  }
+
+  function renderVista() {
+    if (state.vista === "clientes") return renderClientes();
+    if (state.vista === "cobros") return renderCobros();
+    if (state.vista === "ajustes") return renderAjustes();
+    return renderResumen();
+  }
+
+  /* --- Resumen --- */
+  function renderResumen() {
+    var list = cobrosFiltrados();
+    var t = totales(list);
+    var pendientes = list.filter(function (c) { return !c.pagado; });
+    var html = "";
+    html += '<h2 class="section-title display">Resumen</h2>';
+    html += '<p class="section-sub">' + (state.ramaFiltro === "todas" ? "Todas las ramas" : esc(nombreRama(state.ramaFiltro))) + "</p>";
+    html += '<div class="cards-2 mb-4">' +
+      '<div class="stat-card"><div class="val green">' + money(t.total) + '</div><div class="lbl">Total cobrado</div></div>' +
+      '<div class="stat-card"><div class="val orange">' + money(t.pendiente) + '</div><div class="lbl">Pendiente de pago</div></div>' +
+    "</div>";
+
+    html += '<div class="row-between mb-3"><h3 class="display" style="font-size:16px;margin:0">Pendientes de cobro</h3></div>';
+
+    if (pendientes.length === 0) {
+      html += emptyState("🎉", "Sin pendientes", "No hay cobros pendientes de pago en esta selección.");
+    } else {
+      html += '<div class="list">' + pendientes.map(renderCobroCard).join("") + "</div>";
+    }
+    return html;
+  }
+
+  function emptyState(emo, title, sub) {
+    return '<div class="empty"><div class="emo">' + emo + '</div><div class="t display">' + esc(title) + '</div><div class="s">' + esc(sub) + "</div></div>";
+  }
+
+  /* --- Clientes --- */
+  function renderClientes() {
+    var list = clientesDeRama(state.ramaFiltro).slice().sort(function (a, b) { return (a.nombre || "").localeCompare(b.nombre || ""); });
+    var html = "";
+    html += '<div class="row-between mb-1"><h2 class="section-title display">Clientes</h2></div>';
+    html += '<p class="section-sub">' + (state.ramaFiltro === "todas" ? "Todas las ramas" : esc(nombreRama(state.ramaFiltro))) + "</p>";
+    html += '<div class="mb-4">' +
+      '<button class="btn btn-primary" data-action="nuevo-cliente" ' + (data.ramas.length === 0 ? "disabled" : "") + ">➕ Nuevo cliente</button>" +
+    "</div>";
+    if (data.ramas.length === 0) {
+      html += emptyState("🏬", "Primero crea una rama", "Necesitas al menos una rama o sucursal para poder agregar clientes.");
+      return html;
+    }
+    if (list.length === 0) {
+      html += emptyState("👤", "Sin clientes", "Los clientes que agregues aparecerán aquí.");
+      return html;
+    }
+    html += '<div class="list">' + list.map(renderClienteCard).join("") + "</div>";
+    return html;
+  }
+
+  function renderClienteCard(c) {
+    var cobrosCliente = data.cobros.filter(function (x) { return x.clienteId === c.id; });
+    var t = totales(cobrosCliente);
+    return (
+      '<div class="card">' +
+        '<div class="entry-top">' +
+          '<div class="min-w-0">' +
+            '<div class="entry-name">' + esc(c.nombre) + "</div>" +
+            '<div class="entry-meta">' + (c.telefono ? esc(c.telefono) + " · " : "") + esc(nombreRama(c.ramaId)) + "</div>" +
+          "</div>" +
+          '<div class="entry-actions">' +
+            '<button class="icon-btn" data-action="editar-cliente" data-id="' + c.id + '" title="Editar">✎</button>' +
+            '<button class="icon-btn danger" data-action="eliminar-cliente" data-id="' + c.id + '" title="Eliminar">🗑</button>' +
+          "</div>" +
+        "</div>" +
+        '<div class="entry-bottom">' +
+          '<span class="badge ' + (t.pendiente > 0 ? "pendiente" : "pagado") + '">' + (t.pendiente > 0 ? "Debe " + money(t.pendiente) : "Al día") + "</span>" +
+          '<button class="btn btn-ghost btn-sm" data-action="ver-cobros-cliente" data-id="' + c.id + '">Ver cobros</button>' +
+        "</div>" +
+      "</div>"
+    );
+  }
+
+  /* --- Cobros --- */
+  function renderCobros() {
+    var clientesDisponibles = clientesDeRama(state.ramaFiltro);
+    var list = cobrosFiltrados();
+    var html = "";
+    html += '<div class="row-between mb-1"><h2 class="section-title display">Cobros</h2></div>';
+    html += '<p class="section-sub">' + (state.ramaFiltro === "todas" ? "Todas las ramas" : esc(nombreRama(state.ramaFiltro))) + "</p>";
+
+    var filtroOptions = '<option value="todos">Todos los clientes</option>' +
+      clientesDisponibles.map(function (c) {
+        return '<option value="' + c.id + '"' + (state.clienteFiltroCobros === c.id ? " selected" : "") + '>' + esc(c.nombre) + "</option>";
+      }).join("");
+    html += '<div class="mb-3"><select class="rama-select" style="background:#fff;border-color:var(--border);color:var(--ink)" id="selClienteFiltro">' + filtroOptions + "</select></div>";
+
+    html += '<div class="mb-4"><button class="btn btn-primary" data-action="nuevo-cobro" ' + (data.clientes.length === 0 ? "disabled" : "") + ">💰 Registrar cobro</button></div>";
+
+    if (data.ramas.length === 0) {
+      html += emptyState("🏬", "Primero crea una rama", "Necesitas al menos una rama y un cliente para registrar cobros.");
+      return html;
+    }
+    if (data.clientes.length === 0) {
+      html += emptyState("👤", "Primero agrega un cliente", "Ve a la pestaña Clientes para crear el primero.");
+      return html;
+    }
+    if (list.length === 0) {
+      html += emptyState("💵", "Sin cobros registrados", "Los cobros que registres aparecerán aquí.");
+      return html;
+    }
+    html += '<div class="list">' + list.map(renderCobroCard).join("") + "</div>";
+    return html;
+  }
+
+  function renderCobroCard(c) {
+    var cliente = clienteById(c.clienteId);
+    var nombreCliente = cliente ? cliente.nombre : "(cliente eliminado)";
+    var telefono = cliente ? cliente.telefono : "";
+    return (
+      '<div class="card">' +
+        '<div class="entry-top">' +
+          '<div class="min-w-0">' +
+            '<div class="entry-name">' + esc(nombreCliente) + "</div>" +
+            '<div class="entry-meta">' + esc(c.concepto) + "</div>" +
+            '<div class="entry-meta mono">' + esc(nombreRama(c.ramaId)) + " · " + formatDate(c.fecha) + "</div>" +
+          "</div>" +
+          '<div class="entry-actions">' +
+            '<span class="entry-amount">' + money(c.monto) + "</span>" +
+            '<button class="icon-btn" data-action="editar-cobro" data-id="' + c.id + '" title="Editar">✎</button>' +
+            '<button class="icon-btn danger" data-action="eliminar-cobro" data-id="' + c.id + '" title="Eliminar">🗑</button>' +
+          "</div>" +
+        "</div>" +
+        '<div class="entry-bottom">' +
+          '<span class="badge ' + (c.pagado ? "pagado" : "pendiente") + '">' + (c.pagado ? "✓ Pagado" : "Pendiente") + "</span>" +
+          (!c.pagado ? '<div style="display:flex;gap:8px">' +
+            '<button class="btn btn-ghost btn-sm" data-action="marcar-pagado" data-id="' + c.id + '">Marcar pagado</button>' +
+            (telefono ? '<button class="btn btn-ghost btn-sm" data-action="cobrar-whatsapp" data-id="' + c.id + '">📲 WhatsApp</button>' : "") +
+          "</div>" : "") +
+        "</div>" +
+      "</div>"
+    );
+  }
+
+  /* --- Ajustes --- */
+  function renderAjustes() {
+    var html = "";
+    html += '<h2 class="section-title display">Ajustes</h2>';
+    html += '<p class="section-sub">Configura tu negocio, tus ramas y tus respaldos.</p>';
+
+    html += '<div class="card mb-4">' +
+      '<div class="field mb-2"><span class="label">Nombre del negocio</span>' +
+        '<input type="text" id="inpNegocio" value="' + esc(data.negocio) + '" placeholder="Ej. Mi negocio" /></div>' +
+      '<button class="btn btn-ghost btn-sm" data-action="guardar-negocio">Guardar</button>' +
+      '<p style="font-size:12px;color:var(--muted);margin-top:8px">Se usa en los mensajes de cobro por WhatsApp.</p>' +
+    "</div>";
+
+    html += '<div class="row-between mb-2"><h3 class="display" style="font-size:16px;margin:0">Ramas / sucursales</h3>' +
+      '<button class="btn btn-ghost btn-sm" data-action="nueva-rama">+ Nueva</button></div>';
+    if (data.ramas.length === 0) {
+      html += emptyState("🏬", "Sin ramas todavía", "Crea tu primera rama o sucursal para empezar.");
+    } else {
+      html += '<div class="list mb-4">' + data.ramas.map(function (r) {
+        var cantClientes = data.clientes.filter(function (c) { return c.ramaId === r.id; }).length;
+        return '<div class="card"><div class="entry-top">' +
+          '<div><div class="entry-name">' + esc(r.nombre) + '</div><div class="entry-meta">' + cantClientes + " cliente(s)</div></div>" +
+          '<div class="entry-actions">' +
+            '<button class="icon-btn" data-action="editar-rama" data-id="' + r.id + '" title="Editar">✎</button>' +
+            '<button class="icon-btn danger" data-action="eliminar-rama" data-id="' + r.id + '" title="Eliminar">🗑</button>' +
+          "</div></div></div>";
+      }).join("") + "</div>";
+    }
+
+    html += '<div class="row-between mb-2"><h3 class="display" style="font-size:16px;margin:0">Respaldo</h3></div>';
+    html += '<div class="card mb-4">' +
+      '<p style="font-size:13px;color:var(--muted);margin:0 0 12px">Tus datos se guardan solo en este dispositivo/navegador. Descarga un respaldo para no perderlos o para pasarlos a otro dispositivo.</p>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button class="btn btn-ghost btn-sm" data-action="exportar">⬇️ Descargar respaldo</button>' +
+        '<label class="btn btn-ghost btn-sm" style="margin:0">⬆️ Restaurar respaldo<input type="file" accept="application/json" id="inpImportar" style="display:none" /></label>' +
+      "</div>" +
+    "</div>";
+
+    html += '<div class="danger-zone">' +
+      '<div class="entry-name" style="color:var(--orange)">Borrar todos los datos</div>' +
+      '<p style="font-size:13px;color:var(--muted);margin:6px 0 10px">Elimina ramas, clientes y cobros de este dispositivo. No se puede deshacer.</p>' +
+      '<button class="btn btn-danger btn-sm" data-action="borrar-todo">Borrar todo</button>' +
+    "</div>";
+
+    return html;
+  }
+
+  /* ---------------------------------------------------------
+     Modales (formularios)
+  ----------------------------------------------------------*/
+  function renderModal() {
+    if (!state.modal) return "";
+    var m = state.modal;
+    var body = "";
+    if (m.type === "rama") body = modalRamaForm(m.payload);
+    else if (m.type === "cliente") body = modalClienteForm(m.payload);
+    else if (m.type === "cobro") body = modalCobroForm(m.payload);
+    return '<div class="modal-overlay" id="modalOverlay"><div class="modal">' + body + "</div></div>";
+  }
+
+  function modalRamaForm(payload) {
+    var editing = payload && payload.id;
+    var nombre = payload ? payload.nombre : "";
+    return (
+      '<h3 class="display mb-3" style="font-size:18px">' + (editing ? "Editar rama" : "Nueva rama") + "</h3>" +
+      '<div class="field"><span class="label">Nombre de la rama</span>' +
+        '<input type="text" id="fRamaNombre" value="' + esc(nombre) + '" placeholder="Ej. Sucursal Norte" /></div>' +
+      '<div style="display:flex;gap:8px;margin-top:6px">' +
+        '<button class="btn btn-primary" data-action="guardar-rama" data-id="' + (editing || "") + '">Guardar</button>' +
+        '<button class="btn btn-ghost" data-action="cerrar-modal">Cancelar</button>' +
+      "</div>"
+    );
+  }
+
+  function modalClienteForm(payload) {
+    var editing = payload && payload.id;
+    var nombre = payload ? payload.nombre : "";
+    var telefono = payload ? payload.telefono : "";
+    var ramaId = payload ? payload.ramaId : (state.ramaFiltro !== "todas" ? state.ramaFiltro : (data.ramas[0] ? data.ramas[0].id : ""));
+    var ramaOptions = data.ramas.map(function (r) {
+      return '<option value="' + r.id + '"' + (r.id === ramaId ? " selected" : "") + '>' + esc(r.nombre) + "</option>";
+    }).join("");
+    return (
+      '<h3 class="display mb-3" style="font-size:18px">' + (editing ? "Editar cliente" : "Nuevo cliente") + "</h3>" +
+      '<div class="field"><span class="label">Rama / sucursal</span><select id="fClienteRama">' + ramaOptions + "</select></div>" +
+      '<div class="field"><span class="label">Nombre del cliente</span><input type="text" id="fClienteNombre" value="' + esc(nombre) + '" placeholder="Nombre completo" /></div>' +
+      '<div class="field"><span class="label">Teléfono (opcional, para WhatsApp)</span><input type="tel" id="fClienteTelefono" value="' + esc(telefono) + '" placeholder="Ej. 0991234567" /></div>' +
+      '<div style="display:flex;gap:8px;margin-top:6px">' +
+        '<button class="btn btn-primary" data-action="guardar-cliente" data-id="' + (editing || "") + '">Guardar</button>' +
+        '<button class="btn btn-ghost" data-action="cerrar-modal">Cancelar</button>' +
+      "</div>"
+    );
+  }
+
+  function modalCobroForm(payload) {
+    var editing = payload && payload.id;
+    var clienteId = payload ? payload.clienteId : (state.clienteFiltroCobros !== "todos" ? state.clienteFiltroCobros : "");
+    var concepto = payload ? payload.concepto : "";
+    var monto = payload ? payload.monto : "";
+    var pagado = payload ? !!payload.pagado : true;
+    var clientesOptions = data.clientes.map(function (c) {
+      return '<option value="' + c.id + '"' + (c.id === clienteId ? " selected" : "") + '>' + esc(c.nombre) + " (" + esc(nombreRama(c.ramaId)) + ")</option>";
+    }).join("");
+    return (
+      '<h3 class="display mb-3" style="font-size:18px">' + (editing ? "Editar cobro" : "Registrar cobro") + "</h3>" +
+      '<div class="field"><span class="label">Cliente</span><select id="fCobroCliente"><option value="">Selecciona un cliente</option>' + clientesOptions + "</select></div>" +
+      '<div class="field"><span class="label">Concepto</span><input type="text" id="fCobroConcepto" value="' + esc(concepto) + '" placeholder="Ej. Servicio, producto, cuota..." /></div>' +
+      '<div class="field"><span class="label">Monto</span><input type="number" step="0.01" min="0" id="fCobroMonto" value="' + esc(monto) + '" placeholder="Ej. 25.00" /></div>' +
+      '<label class="checkbox-row"><input type="checkbox" id="fCobroPagado" ' + (pagado ? "checked" : "") + " /> Ya está pagado</label>" +
+      '<div style="display:flex;gap:8px;margin-top:6px">' +
+        '<button class="btn btn-primary" data-action="guardar-cobro" data-id="' + (editing || "") + '">Guardar</button>' +
+        '<button class="btn btn-ghost" data-action="cerrar-modal">Cancelar</button>' +
+      "</div>"
+    );
+  }
+
+  /* ---------------------------------------------------------
+     Acciones
+  ----------------------------------------------------------*/
+  function abrirModal(type, payload) {
+    state.modal = { type: type, payload: payload || null };
+    render();
+  }
+  function cerrarModal() {
+    state.modal = null;
+    render();
+  }
+
+  function guardarRama(id) {
+    var nombre = document.getElementById("fRamaNombre").value.trim();
+    if (!nombre) return;
+    if (id) {
+      var r = ramaById(id);
+      if (r) r.nombre = nombre;
+      showToast("Rama actualizada");
+    } else {
+      data.ramas.push({ id: uid(), nombre: nombre });
+      showToast("Rama creada");
+    }
+    saveData();
+    cerrarModal();
+  }
+
+  function eliminarRama(id) {
+    var r = ramaById(id);
+    if (!r) return;
+    if (!confirm('¿Eliminar la rama "' + r.nombre + '"? Los clientes y cobros asociados no se borrarán, pero quedarán sin rama.')) return;
+    data.ramas = data.ramas.filter(function (x) { return x.id !== id; });
+    if (state.ramaFiltro === id) state.ramaFiltro = "todas";
+    saveData();
+    showToast("Rama eliminada");
+    render();
+  }
+
+  function guardarCliente(id) {
+    var ramaId = document.getElementById("fClienteRama").value;
+    var nombre = document.getElementById("fClienteNombre").value.trim();
+    var telefono = document.getElementById("fClienteTelefono").value.trim();
+    if (!ramaId || !nombre) return;
+    if (id) {
+      var c = clienteById(id);
+      if (c) { c.ramaId = ramaId; c.nombre = nombre; c.telefono = telefono; }
+      showToast("Cliente actualizado");
+    } else {
+      data.clientes.push({ id: uid(), ramaId: ramaId, nombre: nombre, telefono: telefono });
+      showToast("Cliente agregado");
+    }
+    saveData();
+    cerrarModal();
+  }
+
+  function eliminarCliente(id) {
+    var c = clienteById(id);
+    if (!c) return;
+    var tieneCobros = data.cobros.some(function (x) { return x.clienteId === id; });
+    var msg = '¿Eliminar a "' + c.nombre + '"?' + (tieneCobros ? " También se eliminarán sus cobros registrados." : "");
+    if (!confirm(msg)) return;
+    data.clientes = data.clientes.filter(function (x) { return x.id !== id; });
+    data.cobros = data.cobros.filter(function (x) { return x.clienteId !== id; });
+    saveData();
+    showToast("Cliente eliminado");
+    render();
+  }
+
+  function guardarCobro(id) {
+    var clienteId = document.getElementById("fCobroCliente").value;
+    var concepto = document.getElementById("fCobroConcepto").value.trim();
+    var monto = document.getElementById("fCobroMonto").value;
+    var pagado = document.getElementById("fCobroPagado").checked;
+    if (!clienteId || !concepto || !monto) return;
+    var cliente = clienteById(clienteId);
+    if (id) {
+      var existing = data.cobros.find(function (x) { return x.id === id; });
+      if (existing) {
+        existing.clienteId = clienteId;
+        existing.ramaId = cliente ? cliente.ramaId : existing.ramaId;
+        existing.concepto = concepto;
+        existing.monto = monto;
+        existing.pagado = pagado;
+      }
+      showToast("Cobro actualizado");
+    } else {
+      data.cobros.push({
+        id: uid(),
+        clienteId: clienteId,
+        ramaId: cliente ? cliente.ramaId : null,
+        concepto: concepto,
+        monto: monto,
+        pagado: pagado,
+        fecha: todayISO()
+      });
+      showToast("Cobro registrado");
+    }
+    saveData();
+    cerrarModal();
+  }
+
+  function eliminarCobro(id) {
+    if (!confirm("¿Eliminar este cobro?")) return;
+    data.cobros = data.cobros.filter(function (x) { return x.id !== id; });
+    saveData();
+    showToast("Cobro eliminado");
+    render();
+  }
+
+  function marcarPagado(id) {
+    var c = data.cobros.find(function (x) { return x.id === id; });
+    if (!c) return;
+    c.pagado = true;
+    saveData();
+    showToast("Marcado como pagado");
+    render();
+  }
+
+  function cobrarWhatsApp(id) {
+    var c = data.cobros.find(function (x) { return x.id === id; });
+    if (!c) return;
+    var cliente = clienteById(c.clienteId);
+    if (!cliente || !cliente.telefono) return;
+    var negocio = data.negocio || "nuestro negocio";
+    var mensaje = "Hola" + (cliente.nombre ? " " + cliente.nombre : "") + ", le escribimos de " + negocio +
+      " (" + nombreRama(c.ramaId) + ") sobre un saldo pendiente:\n\n• " + c.concepto + " (" + formatDate(c.fecha) + "): " + money(c.monto) +
+      "\n\nQuedamos atentos para coordinar el pago. ¡Gracias!";
+    window.open(whatsappLink(cliente.telefono, mensaje), "_blank");
+  }
+
+  function guardarNegocio() {
+    data.negocio = document.getElementById("inpNegocio").value.trim();
+    saveData();
+    showToast("Guardado");
+  }
+
+  function exportarRespaldo() {
+    var backup = { app: "CobraYa", version: 1, exportedAt: new Date().toISOString(), data: data };
+    var blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "cobraya-respaldo-" + todayISO() + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast("Respaldo descargado");
+  }
+
+  function importarRespaldo(file) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        var parsed = JSON.parse(e.target.result);
+        var incoming = parsed && parsed.data ? parsed.data : parsed;
+        if (!incoming || typeof incoming !== "object") throw new Error("formato inválido");
+        if (!confirm("Esto reemplazará todos los datos actuales de este dispositivo por los del respaldo. ¿Continuar?")) return;
+        data = {
+          negocio: incoming.negocio || "",
+          ramas: Array.isArray(incoming.ramas) ? incoming.ramas : [],
+          clientes: Array.isArray(incoming.clientes) ? incoming.clientes : [],
+          cobros: Array.isArray(incoming.cobros) ? incoming.cobros : []
+        };
+        saveData();
+        state.ramaFiltro = "todas";
+        showToast("Respaldo restaurado");
+        render();
+      } catch (err) {
+        showToast("No se pudo leer el archivo. Asegúrate de que sea un respaldo válido de CobraYa (.json).");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function borrarTodo() {
+    if (!confirm("Esto borrará TODAS las ramas, clientes y cobros de este dispositivo. Esta acción no se puede deshacer. ¿Continuar?")) return;
+    data = defaultData();
+    saveData();
+    state.ramaFiltro = "todas";
+    showToast("Datos borrados");
+    render();
+  }
+
+  /* ---------------------------------------------------------
+     Eventos (delegados una sola vez sobre document, para que
+     sobrevivan a los re-renders que reemplazan el innerHTML)
+  ----------------------------------------------------------*/
+  function setupGlobalEvents() {
+    document.addEventListener("change", function (e) {
+      if (e.target.id === "selRamaFiltro") {
+        state.ramaFiltro = e.target.value;
+        render();
+      } else if (e.target.id === "selClienteFiltro") {
+        state.clienteFiltroCobros = e.target.value;
+        render();
+      } else if (e.target.id === "inpImportar") {
+        if (e.target.files && e.target.files[0]) importarRespaldo(e.target.files[0]);
+      }
+    });
+
+    document.addEventListener("click", function (e) {
+      var overlay = document.getElementById("modalOverlay");
+      if (overlay && e.target === overlay) {
+        cerrarModal();
+        return;
+      }
+
+      var tabBtn = e.target.closest("[data-vista]");
+      if (tabBtn) {
+        state.vista = tabBtn.getAttribute("data-vista");
+        if (state.vista === "cobros") state.clienteFiltroCobros = "todos";
+        render();
+        return;
+      }
+
+      var el = e.target.closest("[data-action]");
+      if (!el) return;
+      var action = el.getAttribute("data-action");
+      var id = el.getAttribute("data-id");
+
+      if (action === "nueva-rama") abrirModal("rama", null);
+      else if (action === "editar-rama") abrirModal("rama", ramaById(id));
+      else if (action === "guardar-rama") guardarRama(id || null);
+      else if (action === "eliminar-rama") eliminarRama(id);
+      else if (action === "cerrar-modal") cerrarModal();
+
+      else if (action === "nuevo-cliente") abrirModal("cliente", null);
+      else if (action === "editar-cliente") abrirModal("cliente", clienteById(id));
+      else if (action === "guardar-cliente") guardarCliente(id || null);
+      else if (action === "eliminar-cliente") eliminarCliente(id);
+      else if (action === "ver-cobros-cliente") {
+        state.vista = "cobros";
+        state.clienteFiltroCobros = id;
+        render();
+      }
+
+      else if (action === "nuevo-cobro") abrirModal("cobro", null);
+      else if (action === "editar-cobro") abrirModal("cobro", data.cobros.find(function (x) { return x.id === id; }));
+      else if (action === "guardar-cobro") guardarCobro(id || null);
+      else if (action === "eliminar-cobro") eliminarCobro(id);
+      else if (action === "marcar-pagado") marcarPagado(id);
+      else if (action === "cobrar-whatsapp") cobrarWhatsApp(id);
+
+      else if (action === "guardar-negocio") guardarNegocio();
+      else if (action === "exportar") exportarRespaldo();
+      else if (action === "borrar-todo") borrarTodo();
+    });
+  }
+
+  setupGlobalEvents();
+  render();
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function () {});
+    });
+  }
+})();
+</script>
+</body>
+</html>
