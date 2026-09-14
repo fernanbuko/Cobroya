@@ -230,8 +230,11 @@
     return "https://wa.me/" + num + "?text=" + encodeURIComponent(mensaje);
   }
 
+  function defaultCuenta() {
+    return { banco: "", tipoCuenta: "", numeroCuenta: "", titular: "", identificacion: "" };
+  }
   function defaultData() {
-    return { propietario: "", negocio: "", onboardingDone: false, clientes: [], cobros: [] };
+    return { propietario: "", negocio: "", onboardingDone: false, clientes: [], cobros: [], cuentaBancaria: defaultCuenta() };
   }
   function loadData() {
     try {
@@ -239,6 +242,7 @@
       if (!raw) return defaultData();
       var parsed = JSON.parse(raw);
       var clientes = Array.isArray(parsed.clientes) ? parsed.clientes : [];
+      var cuenta = parsed.cuentaBancaria && typeof parsed.cuentaBancaria === "object" ? parsed.cuentaBancaria : {};
       return {
         propietario: parsed.propietario || "",
         negocio: parsed.negocio || "",
@@ -247,7 +251,14 @@
         // el negocio ya quedó configurado y no hay que volver a preguntar.
         onboardingDone: typeof parsed.onboardingDone === "boolean" ? parsed.onboardingDone : clientes.length > 0,
         clientes: clientes,
-        cobros: Array.isArray(parsed.cobros) ? parsed.cobros : []
+        cobros: Array.isArray(parsed.cobros) ? parsed.cobros : [],
+        cuentaBancaria: {
+          banco: cuenta.banco || "",
+          tipoCuenta: cuenta.tipoCuenta || "",
+          numeroCuenta: cuenta.numeroCuenta || "",
+          titular: cuenta.titular || "",
+          identificacion: cuenta.identificacion || ""
+        }
       };
     } catch (e) {
       return defaultData();
@@ -348,6 +359,7 @@
     { key: "resumen", label: "Resumen" },
     { key: "clientes", label: "Clientes" },
     { key: "cobros", label: "Cobros" },
+    { key: "cuenta", label: "Cuenta" },
     { key: "ajustes", label: "Ajustes" }
   ];
   function renderTabs() {
@@ -363,8 +375,56 @@
   function renderVista() {
     if (state.vista === "clientes") return renderClientes();
     if (state.vista === "cobros") return renderCobros();
+    if (state.vista === "cuenta") return renderCuenta();
     if (state.vista === "ajustes") return renderAjustes();
     return renderResumen();
+  }
+
+  /* --- Cuenta bancaria --- */
+  function renderCuenta() {
+    var c = data.cuentaBancaria;
+    var tieneDatos = !!(c.banco || c.numeroCuenta);
+    var html = "";
+    html += '<h2 class="section-title display">Cuenta bancaria</h2>';
+    html += '<p class="section-sub">Guarda los datos de tu cuenta para compartirlos rápido por WhatsApp cuando te pregunten cómo pagarte.</p>';
+
+    html += '<div class="card mb-4">' +
+      '<div class="field mb-2"><span class="label">Banco</span>' +
+        '<input type="text" id="fCuentaBanco" value="' + esc(c.banco) + '" placeholder="Ej. Banco Pichincha" /></div>' +
+      '<div class="field mb-2"><span class="label">Tipo de cuenta</span>' +
+        '<select id="fCuentaTipo">' +
+          ["", "Ahorros", "Corriente"].map(function (op) {
+            return '<option value="' + op + '"' + (c.tipoCuenta === op ? " selected" : "") + '>' + (op || "Selecciona...") + "</option>";
+          }).join("") +
+        "</select></div>" +
+      '<div class="field mb-2"><span class="label">Número de cuenta</span>' +
+        '<input type="text" id="fCuentaNumero" value="' + esc(c.numeroCuenta) + '" placeholder="Ej. 2210012345" /></div>' +
+      '<div class="field mb-2"><span class="label">Nombre del titular</span>' +
+        '<input type="text" id="fCuentaTitular" value="' + esc(c.titular) + '" placeholder="Ej. María Torres" /></div>' +
+      '<div class="field mb-2"><span class="label">Cédula / RUC (opcional)</span>' +
+        '<input type="text" id="fCuentaId" value="' + esc(c.identificacion) + '" placeholder="Ej. 1712345678" /></div>' +
+      '<button class="btn btn-primary btn-sm" data-action="guardar-cuenta">Guardar</button>' +
+    "</div>";
+
+    if (tieneDatos) {
+      html += '<div class="card mb-4">' +
+        '<div class="entry-name mb-2">Vista previa</div>' +
+        '<div style="font-size:14px;line-height:1.7;color:var(--ink)">' +
+          (c.banco ? "<strong>Banco:</strong> " + esc(c.banco) + "<br/>" : "") +
+          (c.tipoCuenta ? "<strong>Tipo de cuenta:</strong> " + esc(c.tipoCuenta) + "<br/>" : "") +
+          (c.numeroCuenta ? "<strong>N.º de cuenta:</strong> " + esc(c.numeroCuenta) + "<br/>" : "") +
+          (c.titular ? "<strong>Titular:</strong> " + esc(c.titular) + "<br/>" : "") +
+          (c.identificacion ? "<strong>Cédula/RUC:</strong> " + esc(c.identificacion) : "") +
+        "</div>" +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">' +
+          '<button class="btn btn-primary btn-sm" data-action="compartir-cuenta">📲 Compartir por WhatsApp</button>' +
+          '<button class="btn btn-ghost btn-sm" data-action="copiar-cuenta">📋 Copiar</button>' +
+        "</div>" +
+      "</div>";
+    } else {
+      html += emptyState("🏦", "Sin datos guardados", "Completa al menos el banco y el número de cuenta para poder compartirlos.");
+    }
+    return html;
   }
 
   /* --- Resumen --- */
@@ -727,6 +787,47 @@
     window.open(whatsappLink(cliente.telefono, mensaje), "_blank");
   }
 
+  function guardarCuenta() {
+    data.cuentaBancaria = {
+      banco: document.getElementById("fCuentaBanco").value.trim(),
+      tipoCuenta: document.getElementById("fCuentaTipo").value,
+      numeroCuenta: document.getElementById("fCuentaNumero").value.trim(),
+      titular: document.getElementById("fCuentaTitular").value.trim(),
+      identificacion: document.getElementById("fCuentaId").value.trim()
+    };
+    saveData();
+    showToast("Datos de la cuenta guardados");
+    render();
+  }
+
+  function textoCuentaBancaria() {
+    var c = data.cuentaBancaria;
+    var lineas = ["Datos para transferencia" + (data.negocio ? " - " + data.negocio : "") + ":"];
+    if (c.banco) lineas.push("Banco: " + c.banco);
+    if (c.tipoCuenta) lineas.push("Tipo de cuenta: " + c.tipoCuenta);
+    if (c.numeroCuenta) lineas.push("Número de cuenta: " + c.numeroCuenta);
+    if (c.titular) lineas.push("Titular: " + c.titular);
+    if (c.identificacion) lineas.push("Cédula/RUC: " + c.identificacion);
+    return lineas.join("\n");
+  }
+
+  function compartirCuenta() {
+    window.open(whatsappLink("", textoCuentaBancaria()), "_blank");
+  }
+
+  function copiarCuenta() {
+    var texto = textoCuentaBancaria();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(function () {
+        showToast("Copiado al portapapeles");
+      }, function () {
+        showToast("No se pudo copiar");
+      });
+    } else {
+      showToast("No se pudo copiar");
+    }
+  }
+
   function guardarNegocio() {
     data.propietario = document.getElementById("inpPropietario").value.trim();
     data.negocio = document.getElementById("inpNegocio").value.trim();
@@ -757,12 +858,20 @@
         if (!incoming || typeof incoming !== "object") throw new Error("formato inválido");
         if (!confirm("Esto reemplazará todos los datos actuales de este dispositivo por los del respaldo. ¿Continuar?")) return;
         var clientesImportados = Array.isArray(incoming.clientes) ? incoming.clientes : [];
+        var cuentaImportada = incoming.cuentaBancaria && typeof incoming.cuentaBancaria === "object" ? incoming.cuentaBancaria : {};
         data = {
           propietario: incoming.propietario || "",
           negocio: incoming.negocio || "",
           onboardingDone: typeof incoming.onboardingDone === "boolean" ? incoming.onboardingDone : clientesImportados.length > 0,
           clientes: clientesImportados,
-          cobros: Array.isArray(incoming.cobros) ? incoming.cobros : []
+          cobros: Array.isArray(incoming.cobros) ? incoming.cobros : [],
+          cuentaBancaria: {
+            banco: cuentaImportada.banco || "",
+            tipoCuenta: cuentaImportada.tipoCuenta || "",
+            numeroCuenta: cuentaImportada.numeroCuenta || "",
+            titular: cuentaImportada.titular || "",
+            identificacion: cuentaImportada.identificacion || ""
+          }
         };
         saveData();
         showToast("Respaldo restaurado");
@@ -839,6 +948,9 @@
       else if (action === "cobrar-whatsapp") cobrarWhatsApp(id);
 
       else if (action === "guardar-negocio") guardarNegocio();
+      else if (action === "guardar-cuenta") guardarCuenta();
+      else if (action === "compartir-cuenta") compartirCuenta();
+      else if (action === "copiar-cuenta") copiarCuenta();
       else if (action === "exportar") exportarRespaldo();
       else if (action === "borrar-todo") borrarTodo();
     });
