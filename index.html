@@ -275,6 +275,55 @@
     return "https://wa.me/" + numeroWhatsApp(telefono) + "?text=" + encodeURIComponent(mensaje);
   }
 
+  var PAISES = [
+    { nombre: "Ecuador", codigo: "593" },
+    { nombre: "Colombia", codigo: "57" },
+    { nombre: "México", codigo: "52" },
+    { nombre: "Perú", codigo: "51" },
+    { nombre: "España", codigo: "34" },
+    { nombre: "Estados Unidos / Canadá", codigo: "1" },
+    { nombre: "Argentina", codigo: "54" },
+    { nombre: "Chile", codigo: "56" },
+    { nombre: "Venezuela", codigo: "58" },
+    { nombre: "Bolivia", codigo: "591" },
+    { nombre: "Paraguay", codigo: "595" },
+    { nombre: "Uruguay", codigo: "598" },
+    { nombre: "Panamá", codigo: "507" },
+    { nombre: "Costa Rica", codigo: "506" },
+    { nombre: "Guatemala", codigo: "502" },
+    { nombre: "Honduras", codigo: "504" },
+    { nombre: "El Salvador", codigo: "503" },
+    { nombre: "Nicaragua", codigo: "505" },
+    { nombre: "República Dominicana", codigo: "1" },
+    { nombre: "Cuba", codigo: "53" }
+  ];
+  // Selector de país reutilizable (bienvenida y Ajustes): muestra nombres
+  // de país en vez de pedir de memoria el código telefónico, con una
+  // opción "Otro país" que revela un campo para escribirlo a mano.
+  function renderSelectorPais(idPrefix, codigoActual) {
+    var coincide = PAISES.some(function (p) { return p.codigo === codigoActual; });
+    var esOtro = !!codigoActual && !coincide;
+    var opciones = '<option value="">Selecciona tu país</option>' +
+      PAISES.map(function (p) {
+        return '<option value="' + p.codigo + '"' + (!esOtro && p.codigo === codigoActual ? " selected" : "") + '>' + p.nombre + " (+" + p.codigo + ")</option>";
+      }).join("") +
+      '<option value="otro"' + (esOtro ? " selected" : "") + '>Otro país (escribir código)</option>';
+    return (
+      '<div class="field mb-2"><span class="label">País (para reconocer tus números en WhatsApp)</span>' +
+        '<select id="' + idPrefix + 'Pais">' + opciones + "</select>" +
+      "</div>" +
+      '<div class="field mb-2"' + (esOtro ? "" : " hidden") + ' id="' + idPrefix + 'ManualWrap">' +
+        '<span class="label">Código de país</span>' +
+        '<input type="text" id="' + idPrefix + 'Manual" value="' + esc(esOtro ? codigoActual : "") + '" placeholder="Ej. 593" inputMode="numeric" />' +
+      "</div>"
+    );
+  }
+  function leerSelectorPais(idPrefix) {
+    var sel = document.getElementById(idPrefix + "Pais").value;
+    if (sel === "otro") return onlyDigits(document.getElementById(idPrefix + "Manual").value);
+    return sel;
+  }
+
   function defaultData() {
     return { propietario: "", negocio: "", codigoPais: "", onboardingDone: false, clientes: [], cobros: [], cuentaBancaria: "" };
   }
@@ -390,6 +439,7 @@
         '<p style="font-size:13px;color:var(--muted);margin:0 0 20px">Antes de empezar, cuéntanos quién eres y el nombre de tu negocio. Podrás editar estos datos después en Ajustes.</p>' +
         '<div class="field"><span class="label">Nombre del dueño/a</span><input type="text" id="obPropietario" placeholder="Ej. María Torres" /></div>' +
         '<div class="field"><span class="label">Nombre del negocio</span><input type="text" id="obNegocio" placeholder="Ej. Mi negocio" /></div>' +
+        renderSelectorPais("ob", "") +
         '<button class="btn btn-primary" style="width:100%;justify-content:center" data-action="completar-onboarding">Comenzar</button>' +
       "</div></div>"
     );
@@ -614,8 +664,7 @@
         '<input type="text" id="inpPropietario" value="' + esc(data.propietario) + '" placeholder="Ej. María Torres" /></div>' +
       '<div class="field mb-2"><span class="label">Nombre del negocio</span>' +
         '<input type="text" id="inpNegocio" value="' + esc(data.negocio) + '" placeholder="Ej. Mi negocio" /></div>' +
-      '<div class="field mb-2"><span class="label">Código de país (para WhatsApp)</span>' +
-        '<input type="text" id="inpCodigoPais" value="' + esc(data.codigoPais) + '" placeholder="Ej. 593 (Ecuador), 57 (Colombia), 1 (EE. UU.)" inputMode="numeric" /></div>' +
+      renderSelectorPais("inp", data.codigoPais) +
       '<button class="btn btn-ghost btn-sm" data-action="guardar-negocio">Guardar</button>' +
       '<p style="font-size:12px;color:var(--muted);margin-top:8px">El nombre del negocio se usa en los mensajes de cobro por WhatsApp. El código de país se agrega automáticamente a los números para que WhatsApp los reconozca, aunque los hayas guardado sin él.</p>' +
     "</div>";
@@ -747,12 +796,14 @@
   function completarOnboarding() {
     var propietario = document.getElementById("obPropietario").value.trim();
     var negocio = document.getElementById("obNegocio").value.trim();
-    if (!propietario || !negocio) {
-      showToast("Completa tu nombre y el de tu negocio para continuar.");
+    var codigoPais = leerSelectorPais("ob");
+    if (!propietario || !negocio || !codigoPais) {
+      showToast("Completa tu nombre, el de tu negocio y tu país para continuar.");
       return;
     }
     data.propietario = propietario;
     data.negocio = negocio;
+    data.codigoPais = codigoPais;
     data.onboardingDone = true;
     saveData();
     showToast("¡Todo listo!");
@@ -922,7 +973,7 @@
   function guardarNegocio() {
     data.propietario = document.getElementById("inpPropietario").value.trim();
     data.negocio = document.getElementById("inpNegocio").value.trim();
-    data.codigoPais = onlyDigits(document.getElementById("inpCodigoPais").value);
+    data.codigoPais = leerSelectorPais("inp");
     saveData();
     showToast("Guardado");
   }
@@ -992,6 +1043,12 @@
         render();
       } else if (e.target.id === "inpImportar") {
         if (e.target.files && e.target.files[0]) importarRespaldo(e.target.files[0]);
+      } else if (/Pais$/.test(e.target.id) && e.target.tagName === "SELECT") {
+        // Sin re-renderizar todo (perdería lo ya escrito en los demás
+        // campos del formulario): solo se muestra/oculta el campo manual.
+        var idPrefix = e.target.id.slice(0, -4);
+        var manualWrap = document.getElementById(idPrefix + "ManualWrap");
+        if (manualWrap) manualWrap.hidden = e.target.value !== "otro";
       }
     });
 
