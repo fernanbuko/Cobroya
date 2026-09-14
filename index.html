@@ -432,19 +432,19 @@
         "</div>" +
       "</div>";
     } else {
-      html += '<div class="card mb-4">' +
-        '<div class="entry-top">' +
+      html += '<div class="card mb-4" style="display:flex;justify-content:space-between;gap:14px">' +
+        '<div style="min-width:0;flex:1">' +
           '<div class="entry-name">Datos guardados</div>' +
-          '<div class="entry-actions">' +
-            '<button class="icon-btn" data-action="compartir-cuenta" title="Compartir por WhatsApp">' +
-              '<svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>' +
-            "</button>" +
-            '<button class="icon-btn" data-action="copiar-cuenta" title="Copiar">📋</button>' +
-            '<button class="icon-btn" data-action="editar-cuenta" title="Editar">✎</button>' +
-            '<button class="icon-btn danger" data-action="borrar-cuenta" title="Borrar">🗑</button>' +
-          "</div>" +
+          '<div style="font-size:14px;line-height:1.7;color:var(--ink);white-space:pre-wrap;margin-top:8px">' + esc(texto) + "</div>" +
         "</div>" +
-        '<div style="font-size:14px;line-height:1.7;color:var(--ink);white-space:pre-wrap;margin-top:10px">' + esc(texto) + "</div>" +
+        '<div style="display:flex;flex-direction:column;gap:12px;flex-shrink:0">' +
+          '<button class="icon-btn" data-action="compartir-cuenta" title="Compartir por WhatsApp">' +
+            '<svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>' +
+          "</button>" +
+          '<button class="icon-btn" data-action="copiar-cuenta" title="Copiar">📋</button>' +
+          '<button class="icon-btn" data-action="editar-cuenta" title="Editar">✎</button>' +
+          '<button class="icon-btn danger" data-action="borrar-cuenta" title="Borrar">🗑</button>' +
+        "</div>" +
       "</div>";
     }
 
