@@ -623,7 +623,19 @@
     if (m.type === "cliente") body = modalClienteForm(m.payload);
     else if (m.type === "cobro") body = modalCobroForm(m.payload);
     else if (m.type === "rapido") body = modalRapidoForm();
+    else if (m.type === "confirm") body = modalConfirmForm(m.payload);
     return '<div class="modal-overlay" id="modalOverlay"><div class="modal">' + body + "</div></div>";
+  }
+
+  function modalConfirmForm(payload) {
+    return (
+      '<h3 class="display mb-3" style="font-size:18px">' + esc(payload.titulo || "Confirmar") + "</h3>" +
+      '<p style="font-size:14px;color:var(--ink);line-height:1.5;margin:0 0 20px">' + esc(payload.mensaje) + "</p>" +
+      '<div style="display:flex;gap:8px">' +
+        '<button class="btn btn-danger" data-action="confirmar-accion">' + esc(payload.textoBoton || "Aceptar") + "</button>" +
+        '<button class="btn btn-ghost" data-action="cerrar-modal">Cancelar</button>' +
+      "</div>"
+    );
   }
 
   function modalRapidoForm() {
@@ -690,6 +702,22 @@
     render();
   }
 
+  // Reemplaza confirm() del navegador (se ve como una alerta del sitio web,
+  // con la URL de GitHub Pages) por un modal propio con el estilo de la
+  // app. onConfirm se ejecuta solo si la persona toca el botón de aceptar.
+  function confirmDialog(mensaje, onConfirm, opts) {
+    state.modal = {
+      type: "confirm",
+      payload: {
+        mensaje: mensaje,
+        onConfirm: onConfirm,
+        titulo: opts && opts.titulo,
+        textoBoton: opts && opts.textoBoton
+      }
+    };
+    render();
+  }
+
   function completarOnboarding() {
     var propietario = document.getElementById("obPropietario").value.trim();
     var negocio = document.getElementById("obNegocio").value.trim();
@@ -751,12 +779,13 @@
     if (!c) return;
     var tieneCobros = data.cobros.some(function (x) { return x.clienteId === id; });
     var msg = '¿Eliminar a "' + c.nombre + '"?' + (tieneCobros ? " También se eliminarán sus cobros registrados." : "");
-    if (!confirm(msg)) return;
-    data.clientes = data.clientes.filter(function (x) { return x.id !== id; });
-    data.cobros = data.cobros.filter(function (x) { return x.clienteId !== id; });
-    saveData();
-    showToast("Cliente eliminado");
-    render();
+    confirmDialog(msg, function () {
+      data.clientes = data.clientes.filter(function (x) { return x.id !== id; });
+      data.cobros = data.cobros.filter(function (x) { return x.clienteId !== id; });
+      saveData();
+      showToast("Cliente eliminado");
+      render();
+    }, { textoBoton: "Eliminar" });
   }
 
   function guardarCobro(id) {
@@ -790,11 +819,12 @@
   }
 
   function eliminarCobro(id) {
-    if (!confirm("¿Eliminar este cobro?")) return;
-    data.cobros = data.cobros.filter(function (x) { return x.id !== id; });
-    saveData();
-    showToast("Cobro eliminado");
-    render();
+    confirmDialog("¿Eliminar este cobro?", function () {
+      data.cobros = data.cobros.filter(function (x) { return x.id !== id; });
+      saveData();
+      showToast("Cobro eliminado");
+      render();
+    }, { textoBoton: "Eliminar" });
   }
 
   function marcarPagado(id) {
@@ -837,12 +867,13 @@
   }
 
   function borrarCuenta() {
-    if (!confirm("¿Borrar los datos de la cuenta bancaria guardados?")) return;
-    data.cuentaBancaria = "";
-    state.editandoCuenta = false;
-    saveData();
-    showToast("Datos de la cuenta borrados");
-    render();
+    confirmDialog("¿Borrar los datos de la cuenta bancaria guardados?", function () {
+      data.cuentaBancaria = "";
+      state.editandoCuenta = false;
+      saveData();
+      showToast("Datos de la cuenta borrados");
+      render();
+    }, { textoBoton: "Borrar" });
   }
 
   function compartirCuenta() {
@@ -890,21 +921,22 @@
         var parsed = JSON.parse(e.target.result);
         var incoming = parsed && parsed.data ? parsed.data : parsed;
         if (!incoming || typeof incoming !== "object") throw new Error("formato inválido");
-        if (!confirm("Esto reemplazará todos los datos actuales de este dispositivo por los del respaldo. ¿Continuar?")) return;
-        var clientesImportados = Array.isArray(incoming.clientes) ? incoming.clientes : [];
-        var cuentaBancariaImportada = typeof incoming.cuentaBancaria === "string" ? incoming.cuentaBancaria :
-          (incoming.cuentaBancaria && typeof incoming.cuentaBancaria === "object" ? cuentaBancariaComoTexto(incoming.cuentaBancaria) : "");
-        data = {
-          propietario: incoming.propietario || "",
-          negocio: incoming.negocio || "",
-          onboardingDone: typeof incoming.onboardingDone === "boolean" ? incoming.onboardingDone : clientesImportados.length > 0,
-          clientes: clientesImportados,
-          cobros: Array.isArray(incoming.cobros) ? incoming.cobros : [],
-          cuentaBancaria: cuentaBancariaImportada
-        };
-        saveData();
-        showToast("Respaldo restaurado");
-        render();
+        confirmDialog("Esto reemplazará todos los datos actuales de este dispositivo por los del respaldo. ¿Continuar?", function () {
+          var clientesImportados = Array.isArray(incoming.clientes) ? incoming.clientes : [];
+          var cuentaBancariaImportada = typeof incoming.cuentaBancaria === "string" ? incoming.cuentaBancaria :
+            (incoming.cuentaBancaria && typeof incoming.cuentaBancaria === "object" ? cuentaBancariaComoTexto(incoming.cuentaBancaria) : "");
+          data = {
+            propietario: incoming.propietario || "",
+            negocio: incoming.negocio || "",
+            onboardingDone: typeof incoming.onboardingDone === "boolean" ? incoming.onboardingDone : clientesImportados.length > 0,
+            clientes: clientesImportados,
+            cobros: Array.isArray(incoming.cobros) ? incoming.cobros : [],
+            cuentaBancaria: cuentaBancariaImportada
+          };
+          saveData();
+          showToast("Respaldo restaurado");
+          render();
+        }, { textoBoton: "Continuar" });
       } catch (err) {
         showToast("No se pudo leer el archivo. Asegúrate de que sea un respaldo válido de CobraYa (.json).");
       }
@@ -913,11 +945,12 @@
   }
 
   function borrarTodo() {
-    if (!confirm("Esto borrará TODOS los clientes y cobros de este dispositivo. Esta acción no se puede deshacer. ¿Continuar?")) return;
-    data = defaultData();
-    saveData();
-    showToast("Datos borrados");
-    render();
+    confirmDialog("Esto borrará TODOS los clientes y cobros de este dispositivo. Esta acción no se puede deshacer. ¿Continuar?", function () {
+      data = defaultData();
+      saveData();
+      showToast("Datos borrados");
+      render();
+    }, { textoBoton: "Borrar todo" });
   }
 
   /* ---------------------------------------------------------
@@ -956,6 +989,11 @@
 
       if (action === "completar-onboarding") completarOnboarding();
       else if (action === "cerrar-modal") cerrarModal();
+      else if (action === "confirmar-accion") {
+        var onConfirm = state.modal && state.modal.payload && state.modal.payload.onConfirm;
+        state.modal = null;
+        if (onConfirm) onConfirm(); else render();
+      }
 
       else if (action === "agregar-rapido") abrirModal("rapido", null);
       else if (action === "guardar-rapido") guardarRapido();
