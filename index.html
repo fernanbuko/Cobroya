@@ -255,13 +255,28 @@
   function onlyDigits(str) {
     return String(str || "").replace(/[^0-9]/g, "");
   }
+  // WhatsApp solo reconoce el número con el código de país delante (sin el
+  // 0 inicial que se usa al marcar dentro del propio país). Si la persona
+  // configuró su código de país en Ajustes, se lo agregamos automáticamente
+  // (quitando el 0 inicial típico) siempre que el número no lo tenga ya; si
+  // escribe el teléfono con "+" adelante, se respeta tal cual porque ya
+  // trae su propio código.
+  function numeroWhatsApp(telefono) {
+    var digits = onlyDigits(telefono);
+    if (!digits) return "";
+    var yaInternacional = String(telefono || "").trim().charAt(0) === "+";
+    var codigo = onlyDigits(data.codigoPais);
+    if (!yaInternacional && codigo && digits.indexOf(codigo) !== 0) {
+      digits = codigo + digits.replace(/^0+/, "");
+    }
+    return digits;
+  }
   function whatsappLink(telefono, mensaje) {
-    var num = onlyDigits(telefono);
-    return "https://wa.me/" + num + "?text=" + encodeURIComponent(mensaje);
+    return "https://wa.me/" + numeroWhatsApp(telefono) + "?text=" + encodeURIComponent(mensaje);
   }
 
   function defaultData() {
-    return { propietario: "", negocio: "", onboardingDone: false, clientes: [], cobros: [], cuentaBancaria: "" };
+    return { propietario: "", negocio: "", codigoPais: "", onboardingDone: false, clientes: [], cobros: [], cuentaBancaria: "" };
   }
   function cuentaBancariaComoTexto(cuentaVieja) {
     var lineas = [];
@@ -286,6 +301,7 @@
       return {
         propietario: parsed.propietario || "",
         negocio: parsed.negocio || "",
+        codigoPais: parsed.codigoPais || "",
         // Los respaldos o datos de antes de que existiera esta pantalla no
         // traen esta bandera: si ya tenían clientes cargados, se asume que
         // el negocio ya quedó configurado y no hay que volver a preguntar.
@@ -598,8 +614,10 @@
         '<input type="text" id="inpPropietario" value="' + esc(data.propietario) + '" placeholder="Ej. María Torres" /></div>' +
       '<div class="field mb-2"><span class="label">Nombre del negocio</span>' +
         '<input type="text" id="inpNegocio" value="' + esc(data.negocio) + '" placeholder="Ej. Mi negocio" /></div>' +
+      '<div class="field mb-2"><span class="label">Código de país (para WhatsApp)</span>' +
+        '<input type="text" id="inpCodigoPais" value="' + esc(data.codigoPais) + '" placeholder="Ej. 593 (Ecuador), 57 (Colombia), 1 (EE. UU.)" inputMode="numeric" /></div>' +
       '<button class="btn btn-ghost btn-sm" data-action="guardar-negocio">Guardar</button>' +
-      '<p style="font-size:12px;color:var(--muted);margin-top:8px">El nombre del negocio se usa en los mensajes de cobro por WhatsApp.</p>' +
+      '<p style="font-size:12px;color:var(--muted);margin-top:8px">El nombre del negocio se usa en los mensajes de cobro por WhatsApp. El código de país se agrega automáticamente a los números para que WhatsApp los reconozca, aunque los hayas guardado sin él.</p>' +
     "</div>";
 
     html += '<div class="row-between mb-2"><h3 class="display" style="font-size:16px;margin:0">Respaldo</h3></div>';
@@ -904,6 +922,7 @@
   function guardarNegocio() {
     data.propietario = document.getElementById("inpPropietario").value.trim();
     data.negocio = document.getElementById("inpNegocio").value.trim();
+    data.codigoPais = onlyDigits(document.getElementById("inpCodigoPais").value);
     saveData();
     showToast("Guardado");
   }
@@ -936,6 +955,7 @@
           data = {
             propietario: incoming.propietario || "",
             negocio: incoming.negocio || "",
+            codigoPais: incoming.codigoPais || "",
             onboardingDone: typeof incoming.onboardingDone === "boolean" ? incoming.onboardingDone : clientesImportados.length > 0,
             clientes: clientesImportados,
             cobros: Array.isArray(incoming.cobros) ? incoming.cobros : [],
