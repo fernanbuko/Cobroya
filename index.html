@@ -302,7 +302,8 @@
   var state = {
     vista: "resumen",    // resumen | clientes | cobros | ajustes
     modal: null,         // {type, payload}
-    clienteFiltroCobros: "todos"
+    clienteFiltroCobros: "todos",
+    editandoCuenta: false
   };
 
   function showToast(msg) {
@@ -415,25 +416,38 @@
     var texto = data.cuentaBancaria;
     var html = "";
     html += '<h2 class="section-title display">Cuenta bancaria</h2>';
-    html += '<p class="section-sub">Pega aquí los datos tal como te los da el banco, para compartirlos rápido por WhatsApp.</p>';
+    html += '<p class="section-sub">Guarda los datos tal como te los da el banco, para compartirlos rápido por WhatsApp.</p>';
 
-    html += '<div class="card mb-4">' +
-      '<div class="field mb-2">' +
-        '<textarea id="fCuentaTexto" rows="6" placeholder="Ej.\nBanco Pichincha\nCuenta de ahorros N.° 2210012345\nFernando Tapia\nCI 1712345678">' + esc(texto) + "</textarea>" +
-      "</div>" +
-      '<button class="btn btn-primary btn-sm" data-action="guardar-cuenta">Guardar</button>' +
-    "</div>";
+    var mostrarForm = !texto.trim() || state.editandoCuenta;
 
-    if (texto.trim()) {
+    if (mostrarForm) {
       html += '<div class="card mb-4">' +
-        '<div class="entry-name mb-2">Vista previa</div>' +
-        '<div style="font-size:14px;line-height:1.7;color:var(--ink);white-space:pre-wrap">' + esc(texto) + "</div>" +
+        '<div class="field mb-2">' +
+          '<textarea id="fCuentaTexto" rows="6" placeholder="Ej.\nBanco Pichincha\nCuenta de ahorros N.° 2210012345\nFernando Tapia\nCI 1712345678">' + esc(texto) + "</textarea>" +
+        "</div>" +
+        '<div style="display:flex;gap:8px">' +
+          '<button class="btn btn-primary btn-sm" data-action="guardar-cuenta">Guardar</button>' +
+          (texto.trim() ? '<button class="btn btn-ghost btn-sm" data-action="cancelar-editar-cuenta">Cancelar</button>' : "") +
+        "</div>" +
+      "</div>";
+    } else {
+      html += '<div class="card mb-4">' +
+        '<div class="entry-top">' +
+          '<div class="entry-name">Datos guardados</div>' +
+          '<div class="entry-actions">' +
+            '<button class="icon-btn" data-action="editar-cuenta" title="Editar">✎</button>' +
+            '<button class="icon-btn danger" data-action="borrar-cuenta" title="Borrar">🗑</button>' +
+          "</div>" +
+        "</div>" +
+        '<div style="font-size:14px;line-height:1.7;color:var(--ink);white-space:pre-wrap;margin-top:6px">' + esc(texto) + "</div>" +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">' +
           '<button class="btn btn-primary btn-sm" data-action="compartir-cuenta">📲 Compartir por WhatsApp</button>' +
           '<button class="btn btn-ghost btn-sm" data-action="copiar-cuenta">📋 Copiar</button>' +
         "</div>" +
       "</div>";
-    } else {
+    }
+
+    if (!texto.trim()) {
       html += emptyState("🏦", "Sin datos guardados", "Pega los datos que te dio el banco para poder compartirlos.");
     }
     return html;
@@ -805,8 +819,28 @@
 
   function guardarCuenta() {
     data.cuentaBancaria = document.getElementById("fCuentaTexto").value.trim();
+    state.editandoCuenta = false;
     saveData();
     showToast("Datos de la cuenta guardados");
+    render();
+  }
+
+  function editarCuenta() {
+    state.editandoCuenta = true;
+    render();
+  }
+
+  function cancelarEditarCuenta() {
+    state.editandoCuenta = false;
+    render();
+  }
+
+  function borrarCuenta() {
+    if (!confirm("¿Borrar los datos de la cuenta bancaria guardados?")) return;
+    data.cuentaBancaria = "";
+    state.editandoCuenta = false;
+    saveData();
+    showToast("Datos de la cuenta borrados");
     render();
   }
 
@@ -943,6 +977,9 @@
 
       else if (action === "guardar-negocio") guardarNegocio();
       else if (action === "guardar-cuenta") guardarCuenta();
+      else if (action === "editar-cuenta") editarCuenta();
+      else if (action === "cancelar-editar-cuenta") cancelarEditarCuenta();
+      else if (action === "borrar-cuenta") borrarCuenta();
       else if (action === "compartir-cuenta") compartirCuenta();
       else if (action === "copiar-cuenta") copiarCuenta();
       else if (action === "exportar") exportarRespaldo();
