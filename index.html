@@ -445,7 +445,10 @@
     var t = totales(list);
     var pendientes = list.filter(function (c) { return !c.pagado; });
     var html = "";
-    html += '<p style="font-size:13px;color:var(--muted);margin:0 0 4px">' + saludoSegunHora() + (data.propietario ? ", " + esc(data.propietario) : "") + " 👋</p>";
+    html += '<div class="mb-3">' +
+      '<div class="display" style="font-size:26px;font-weight:600;line-height:1.2">' + saludoSegunHora() + "</div>" +
+      (data.propietario ? '<div style="font-size:15px;color:var(--muted);margin-top:2px">' + esc(data.propietario) + " 👋</div>" : "") +
+    "</div>";
     html += '<h2 class="section-title display">Resumen</h2>';
     html += '<div class="cards-2 mb-4">' +
       '<div class="stat-card"><div class="val green">' + money(t.total) + '</div><div class="lbl">Total cobrado</div></div>' +
